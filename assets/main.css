@@ -267,3 +267,16 @@ table td { border: 1px solid #e8e8e8; }
   color: #ccc;
   margin: 0;
 }
+
+
+
+h2 {
+  text-align: center;
+    font-family: 'Montserrat', sans-serif; /* Optional: Match the font style */
+    font-size: 28px;
+    font-weight: 400; 
+    line-height: 54px;
+    letter-spacing: -1px;
+    font-weight: lighter; /* Make the font bold */
+    color:#333
+}
