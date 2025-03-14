@@ -105,8 +105,9 @@
   .highlights-section {
     display: flex;
     gap: 20px; /* Space between tiles */
-    justify-content: center; /* Center tiles */
-    flex-wrap: wrap; /* Wrap for responsiveness */
+    justify-content: center; /* Centers tiles in the container */
+    align-items: stretch;
+    flex-wrap: wrap; /* Wraps to next line if space is not enough */
   }
 
   .highlight-item {
@@ -114,7 +115,8 @@
     border-radius: 10px;
     overflow: hidden;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    width: 48%; /* Ensures two tiles side by side */
+    width: 45%; /* Ensures two tiles sit side by side */
+    min-width: 300px;
   }
 
   .highlight-item:hover {
@@ -130,7 +132,7 @@
 
   .highlight-content {
     padding: 15px;
-    background: black; /* Black background as per your screenshot */
+    background: black; /* Black background like your screenshot */
     color: white;
   }
 
@@ -144,14 +146,16 @@
     margin-top: 5px;
   }
 
-  /* Responsive: Stack on smaller screens */
+  /* Responsive: Stack tiles on small screens */
   @media (max-width: 768px) {
+    .highlights-section {
+      flex-direction: column;
+    }
     .highlight-item {
       width: 100%;
     }
   }
 </style>
-
           
 <h2 id="projects">Projects</h2>
 
