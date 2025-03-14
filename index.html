@@ -76,17 +76,81 @@
 <ul class="post-list">
   <li><span class="post-meta">Recent Work</span></li>
 
-  <!-- Highlight Box 1 -->
-  <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6" target="_blank" class="media-link">
-    <div class="media-item highlight-tile">
-      <img src="/assets/images/highlight1.jpg" alt="Project Image 1" class="media-image">
-      <div class="media-content">
-        <h3 class="media-title">3D-Genesis</h3>
-        <p class="media-description">Reconstructing Real-World Objects from Parametric Primitives</p>
+  <div class="highlights-section">
+    <!-- Highlight Box 1 -->
+    <a href="https://your-project-link.com" target="_blank" class="highlight-link">
+      <div class="highlight-item">
+        <img src="/assets/images/highlight1.jpg" alt="Project Image 1" class="highlight-image">
+        <div class="highlight-content">
+          <h3 class="highlight-title"><strong>3D-Genesis</strong></h3>
+          <p class="highlight-description">Reconstructing Real-World Objects from Parametric Primitives</p>
+        </div>
       </div>
-    </div>
-  </a>
+    </a>
+
+    <!-- Highlight Box 2 -->
+    <a href="https://your-project-link.com" target="_blank" class="highlight-link">
+      <div class="highlight-item">
+        <img src="/assets/images/highlight2.jpg" alt="Project Image 2" class="highlight-image">
+        <div class="highlight-content">
+          <h3 class="highlight-title"><strong>Satellite Vision</strong></h3>
+          <p class="highlight-description">Leveraging AI and Satellite Data for Climate Change Analysis</p>
+        </div>
+      </div>
+    </a>
+  </div>
 </ul>
+
+<style>
+  .highlights-section {
+    display: flex;
+    gap: 20px; /* Space between tiles */
+    justify-content: center; /* Center tiles */
+    flex-wrap: wrap; /* Wrap for responsiveness */
+  }
+
+  .highlight-item {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    width: 48%; /* Ensures two tiles side by side */
+  }
+
+  .highlight-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .highlight-image {
+    width: 100%;
+    height: auto;
+    border-bottom: 3px solid #ddd;
+  }
+
+  .highlight-content {
+    padding: 15px;
+    background: black; /* Black background as per your screenshot */
+    color: white;
+  }
+
+  .highlight-title {
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+
+  .highlight-description {
+    font-size: 0.9em;
+    margin-top: 5px;
+  }
+
+  /* Responsive: Stack on smaller screens */
+  @media (max-width: 768px) {
+    .highlight-item {
+      width: 100%;
+    }
+  }
+</style>
 
           
 <h2 id="projects">Projects</h2>
