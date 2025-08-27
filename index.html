@@ -75,19 +75,26 @@
 <h2 class="post-list-sub-heading">Highlights</h2>
 <ul class="post-list">
   <div class="highlights-container">
-  <!-- Large Highlight Box -->
-    <a href="https://strath.ac.uk/whystrathclyde/news/2025/strathclydewinsinfiveoutof10categoriesatknowledgeexchangeawards/" target="_blank" class="highlight-link large-highlight">
-      <div class="highlight-item highlight-large">
-        <img src="/assets/images/H2.jpg" alt="Large Project Image" class="highlight-image" id="large-highlight-img">
-        <div class="highlight-content">
-            <h3 class="highlight-title">2025 Strategic Themes Research and Knowledge Exchange (R&KE) Impact Award Winners<strong></strong></h3>
-            <p class="highlight-description">Centre for Intelligent Dynamic Communications (CIDCOM)</p>
-        </div>
+  <!-- Large Highlight -->
+  <a href="https://strath.ac.uk/whystrathclyde/news/2025/strathclydewinsinfiveoutof10categoriesatknowledgeexchangeawards/"
+     target="_blank" class="highlight-link highlight-large">
+    <div class="highlight-item highlight-large">
+      <img src="/assets/images/H2.jpg" alt="Large Project Image" 
+           class="highlight-image" id="large-highlight-img">
+      <div class="highlight-content">
+        <h3 class="highlight-title">
+          2025 Strategic Themes Research and Knowledge Exchange (R&KE) Impact Award Winners
+        </h3>
+        <p class="highlight-description">Centre for Intelligent Dynamic Communications (CIDCOM)</p>
       </div>
-    </a>
+    </div>
+  </a>
 
-    <!-- Highlight Box 1 -->
-    <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6" target="_blank" class="highlight-link">
+  <!-- Row for smaller highlights -->
+  <div class="highlights-row">
+    <!-- Small Highlight 1 -->
+    <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6"
+       target="_blank" class="highlight-link">
       <div class="highlight-item">
         <img src="/assets/images/Medium-I2.jpg" alt="Project Image 1" class="highlight-image">
         <div class="highlight-content">
@@ -97,7 +104,7 @@
       </div>
     </a>
 
-    <!-- Highlight Box 2 -->
+    <!-- Small Highlight 2 -->
     <a href="https://your-project-link.com" target="_blank" class="highlight-link">
       <div class="highlight-item">
         <img src="/assets/images/I2.gif" alt="Project Image 2" class="highlight-image">
@@ -108,75 +115,63 @@
       </div>
     </a>
   </div>
+</div>
 </ul>
 
 <style>
   /* Force tiles to be side by side */
-  .highlights-container {
-      display: flex;
-      flex-direction: row; /* Ensures side-by-side */
-      justify-content: center;
-      align-items: stretch;
-      gap: 70px; /* Space between tiles */
-      flex-wrap: nowrap; /* Prevents stacking */
-  }
+.highlights-container {
+  display: flex;
+  flex-direction: column; /* Stack rows vertically */
+  gap: 30px; /* space between rows */
+}
 
-  /* Individual tile styling */
-  .highlight-item {
-      background-color: white;
-      border-radius: 10px;
-      overflow: hidden;
-      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-      width: 70%; /* Ensures two tiles fit in one row */
-      min-width: 300px; /* Prevents shrinking */
-      flex: 1; /* Forces equal sizing */
-  }
+/* Row for the two small highlights */
+.highlights-row {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  justify-content: center;
+  flex-wrap: wrap; /* allow stacking on small screens */
+}
 
-  .highlight-item:hover {
-      transform: translateY(-5px);
-      box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15);
-  }
+.highlight-large {
+  width: 100%;   /* Full width for large box */
+  flex: none;
+}
 
-  .highlight-image {
-      width: 100%;
-      height: auto;
-      border-bottom: 3px solid #ddd;
-  }
+.highlight-item {
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  flex: 1;
+  min-width: 300px;
+}
 
-  .highlight-content {
-      padding: 15px;
-      background: black;
-      color: white;
-      flex-grow: 1;
-  }
+.highlight-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15);
+}
 
-  .highlight-title {
-      font-size: 1.2em;
-      font-weight: bold;
-  }
+.highlight-image {
+  width: 100%;
+  height: auto;
+  border-bottom: 3px solid #ddd;
+}
 
-  .highlight-description {
-      font-size: 0.9em;
-      margin-top: 5px;
-  }
+.highlight-content {
+  padding: 15px;
+  background: black;
+  color: white;
+}
 
-  .highlight-large {
-      flex: 2;          /* Twice as wide */
-      min-width: 600px;
+@media (max-width: 768px) {
+  .highlights-row {
+    flex-direction: column;
   }
+}
 
-  @media (max-width: 768px) {
-      .highlights-container {
-          flex-direction: column;
-      }
-      .highlight-item {
-          width: 100%;
-      }  
-      .highlight-large {
-          flex: 1;
-          min-width: 100%;
-      }
-  }
 </style>
 
 <script>
