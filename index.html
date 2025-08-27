@@ -128,11 +128,14 @@
 
 /* Row for the two small highlights */
 .highlights-row {
-  display: flex;
-  flex-direction: row;
-  gap: 30px;
+  display: flex;          /* put children in a row */
+  gap: 30px;              /* spacing between highlights */
   justify-content: center;
-  flex-wrap: wrap; /* allow stacking on small screens */
+}
+
+.highlights-row .highlight-link {
+  flex: 1;                /* share space equally */
+  min-width: 300px;       /* don’t shrink too much */
 }
 
 .highlight-large {
