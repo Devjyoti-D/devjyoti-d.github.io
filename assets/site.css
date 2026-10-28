@@ -12,8 +12,8 @@
   --shadow-hover: 0 2px 4px rgba(0, 0, 0, .06), 0 12px 28px rgba(0, 0, 0, .10);
   --radius: 14px;
   --header-h: 64px;
-  --font: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-head: 'Source Serif 4', Georgia, serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-head: 'Space Grotesk', var(--font);
 }
 
 [data-theme="dark"] {
@@ -36,7 +36,7 @@
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 12px); }
 body {
   margin: 0;
-  font: 400 17px/1.6 var(--font);
+  font: 400 16px/1.6 var(--font);
   color: var(--text);
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
@@ -115,7 +115,7 @@ p { margin: 0; }
 .hero { display: flex; align-items: center; gap: 48px; padding-top: 56px; padding-bottom: 24px; }
 .hero-photo { width: 220px; height: 220px; border-radius: 50%; object-fit: cover; flex-shrink: 0; box-shadow: var(--shadow); }
 .eyebrow { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .3px; margin-bottom: 8px; }
-.hero h1 { font-size: 44px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 14px; }
+.hero h1 { font-size: 44px; font-weight: 700; letter-spacing: -1px; margin-bottom: 14px; }
 .bio { color: var(--muted); font-size: 17px; max-width: 620px; margin-bottom: 22px; }
 .bio strong { color: var(--text); font-weight: 600; }
 .hero-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

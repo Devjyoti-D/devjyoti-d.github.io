@@ -14,7 +14,7 @@
 }
 
 .lab-hero { padding-top: 48px; padding-bottom: 8px; }
-.lab-hero h1 { font-size: 44px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 14px; }
+.lab-hero h1 { font-size: 44px; font-weight: 700; letter-spacing: -1px; margin-bottom: 14px; }
 .lab-hero .bio { margin-bottom: 16px; }
 .badges { display: flex; flex-wrap: wrap; gap: 8px; }
 
