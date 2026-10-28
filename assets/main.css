@@ -280,3 +280,27 @@ h2 {
     font-weight: lighter; /* Make the font bold */
     color:#333
 }
+
+/* Mobile layout */
+html { scroll-behavior: smooth; }
+
+.media-content { min-width: 0; overflow-wrap: anywhere; }
+
+@media screen and (max-width: 600px) {
+  .site-title { font-size: 22px; }
+  .site-nav .page-link { padding: 10px 14px; }
+
+  h2 { font-size: 24px; line-height: 1.3; margin-top: 20px; }
+
+  .media-item { flex-direction: column; }
+  .media-image { width: 100%; height: 180px; }
+  .media-meta img { margin-bottom: 6px; }
+
+  .highlights-container, .highlights-row { gap: 20px; }
+}
+
+/* Touch screens: don't leave hover effects stuck after a tap */
+@media (hover: none) {
+  .media-item:hover, .highlight-item:hover { transform: none; }
+  .media-item:hover .media-image { transform: none; }
+}

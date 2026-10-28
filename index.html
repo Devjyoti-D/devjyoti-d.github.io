@@ -135,7 +135,7 @@
 
 .highlights-row .highlight-link {
   flex: 1;                /* share space equally */
-  min-width: 300px;       /* don’t shrink too much */
+  min-width: 0;           /* allow shrinking on small screens */
 }
 
 .highlight-large {
@@ -149,7 +149,7 @@
   overflow: hidden;
   transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
   flex: 1;
-  min-width: 300px;
+  min-width: 0;
 }
 
 .highlight-item:hover {
@@ -512,6 +512,14 @@ setInterval(slideLargeHighlight, 2000);
     </div>
   </div>
 </footer>
+<script>
+// Close the mobile menu after a link is tapped
+document.querySelectorAll('.site-nav .page-link').forEach(function (link) {
+  link.addEventListener('click', function () {
+    document.getElementById('nav-trigger').checked = false;
+  });
+});
+</script>
 </body>
 </html>
 
