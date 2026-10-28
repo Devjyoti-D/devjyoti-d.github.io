@@ -1,13 +1,13 @@
 /* Quant Lab page (builds on site.css) */
 
 :root {
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --s1: #8a3fd0; --s2: #eb6834; --s3: #1baf7a;
   --muted-bar: #b9bcc6;
   --grid: #e8e8ec; --axis: #c9cbd3;
   --good: #006300; --warn: #9a5b00;
 }
 [data-theme="dark"] {
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --s1: #a865e8; --s2: #d95926; --s3: #199e70;
   --muted-bar: #4a4f5c;
   --grid: #262a34; --axis: #3a3f4c;
   --good: #3ec43e; --warn: #fab219;
