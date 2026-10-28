@@ -1,4 +1,4 @@
-// Homepage interactions: theme, mobile menu, active nav, carousel, filters, media toggle
+// Site interactions (homepage and Quant Lab): theme, mobile menu, active nav, carousel, filters, media toggle
 
 (function () {
   var root = document.documentElement;
@@ -26,8 +26,8 @@
 
   // Highlight the nav link for the section in view
   var links = {};
-  nav.querySelectorAll('a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
-  if ('IntersectionObserver' in window) {
+  nav.querySelectorAll('a[href^="#"]').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window && Object.keys(links).length) {
     var observer = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
@@ -42,23 +42,25 @@
 
   // Highlights carousel: 5s per slide, paused on hover
   var carousel = document.getElementById('carousel');
-  var slides = carousel.querySelectorAll('img');
-  var dots = carousel.querySelectorAll('.dots span');
-  var current = 0;
-  var paused = false;
-  carousel.addEventListener('mouseenter', function () { paused = true; });
-  carousel.addEventListener('mouseleave', function () { paused = false; });
-  setInterval(function () {
-    if (paused || document.hidden) return;
-    slides[current].classList.remove('active');
-    dots[current].classList.remove('active');
-    current = (current + 1) % slides.length;
-    slides[current].classList.add('active');
-    dots[current].classList.add('active');
-  }, 5000);
+  if (carousel) {
+    var slides = carousel.querySelectorAll('img');
+    var dots = carousel.querySelectorAll('.dots span');
+    var current = 0;
+    var paused = false;
+    carousel.addEventListener('mouseenter', function () { paused = true; });
+    carousel.addEventListener('mouseleave', function () { paused = false; });
+    setInterval(function () {
+      if (paused || document.hidden) return;
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = (current + 1) % slides.length;
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+    }, 5000);
+  }
 
   // Topic filters for projects and publications
-  document.querySelectorAll('.filters').forEach(function (group) {
+  document.querySelectorAll('.filters[data-target]').forEach(function (group) {
     var items = document.getElementById(group.dataset.target).children;
     group.addEventListener('click', function (e) {
       var chip = e.target.closest('.chip');
@@ -75,11 +77,13 @@
   // Media "Show more"
   var mediaGrid = document.getElementById('media-grid');
   var moreBtn = document.getElementById('media-more');
-  moreBtn.addEventListener('click', function () {
-    var expanded = mediaGrid.classList.toggle('expanded');
-    moreBtn.textContent = expanded ? 'Show less' : 'Show more';
-    moreBtn.setAttribute('aria-expanded', expanded);
-  });
+  if (mediaGrid && moreBtn) {
+    moreBtn.addEventListener('click', function () {
+      var expanded = mediaGrid.classList.toggle('expanded');
+      moreBtn.textContent = expanded ? 'Show less' : 'Show more';
+      moreBtn.setAttribute('aria-expanded', expanded);
+    });
+  }
 
   document.getElementById('year').textContent = new Date().getFullYear();
 })();

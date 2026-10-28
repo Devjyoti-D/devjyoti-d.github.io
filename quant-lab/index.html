@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quant Lab: Can machine learning pick stocks? | Devjyoti Das</title>
+  <meta name="description" content="An interactive equity machine-learning lab. Train ridge, lasso, gradient boosting and neural-network models live in your browser, then backtest a long-short stock portfolio with walk-forward validation and transaction costs.">
+  <link rel="canonical" href="https://devjyotidas.com/quant-lab/">
+  <meta property="og:title" content="Quant Lab: Can machine learning pick stocks?">
+  <meta property="og:description" content="Train models live in your browser and backtest a long-short equity strategy on a simulated market.">
+  <meta property="og:url" content="https://devjyotidas.com/quant-lab/">
+  <meta property="og:site_name" content="Devjyoti Das">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://devjyotidas.com/assets/images/DP.jpg">
+  <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/assets/lab.css">
+  <script>
+    // Apply saved/system theme before paint to avoid a flash
+    (function () {
+      var t = localStorage.getItem('theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/">Devjyoti Das</a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="/">Home</a>
+      <a href="/#projects">Projects</a>
+      <a href="/#publications">Publications</a>
+      <a href="/quant-lab/" class="active" aria-current="page">Quant Lab</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section class="container lab-hero">
+    <p class="eyebrow">Quant Lab · Interactive machine learning</p>
+    <h1>Can machine learning pick stocks?</h1>
+    <p class="bio">Build a market, train a model and trade its predictions. Every number below is computed live in your browser: change a slider and the model is <strong>re-trained from scratch</strong>, then tested the honest way, on months it has never seen.</p>
+    <div class="badges">
+      <span class="tag">Trains live in your browser</span>
+      <span class="tag">Simulated market</span>
+      <span class="tag">Walk-forward, no look-ahead</span>
+    </div>
+  </section>
+
+  <section class="container presets" aria-label="Scenarios">
+    <div class="preset-row">
+      <span class="preset-label">Try a scenario</span>
+      <div class="filters" id="presets">
+        <button class="chip" data-preset="easy">Easy mode</button>
+        <button class="chip" data-preset="real">Realistic</button>
+        <button class="chip" data-preset="trap">Overfitting trap</button>
+        <button class="chip" data-preset="nonlinear">Nonlinear world</button>
+        <button class="chip" data-preset="crash">Momentum crash</button>
+      </div>
+    </div>
+    <p class="preset-desc" id="preset-desc" aria-live="polite"></p>
+  </section>
+
+  <div class="container lab">
+
+    <!-- Controls -->
+    <aside class="panel controls" aria-label="Controls">
+      <fieldset>
+        <legend>1 · The market</legend>
+        <label class="ctl"><span>Stocks <output id="o-n"></output></span>
+          <input type="range" id="c-n" min="50" max="400" step="50" value="150"></label>
+        <label class="ctl"><span>True predictability (IC) <output id="o-rho"></output></span>
+          <input type="range" id="c-rho" min="0" max="0.15" step="0.01" value="0.06"></label>
+        <p class="hint">The best rank correlation any model could achieve. Real markets sit around 0.02–0.06.</p>
+        <label class="ctl"><span>Nonlinear share of signal <output id="o-nl"></output></span>
+          <input type="range" id="c-nl" min="0" max="0.8" step="0.05" value="0.3"></label>
+        <label class="ctl"><span>Junk features <output id="o-junk"></output></span>
+          <input type="range" id="c-junk" min="0" max="20" step="1" value="4"></label>
+        <label class="check"><input type="checkbox" id="c-regime"> Momentum crash mid-sample</label>
+        <div class="row-between">
+          <span class="hint" id="seed-label"></span>
+          <button class="btn btn-sm" id="reseed" type="button">New market</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2 · The model</legend>
+        <div class="filters" id="models" role="radiogroup" aria-label="Model">
+          <button class="chip" role="radio" data-model="ridge">Ridge</button>
+          <button class="chip" role="radio" data-model="lasso">Lasso</button>
+          <button class="chip" role="radio" data-model="gbm">Boosted trees</button>
+          <button class="chip" role="radio" data-model="mlp">Neural net</button>
+        </div>
+        <p class="hint" id="model-blurb"></p>
+        <label class="ctl"><span id="param-label">Setting</span> <output id="o-param"></output>
+          <input type="range" id="c-param" min="0" max="4" step="1" value="2"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>3 · The strategy</legend>
+        <label class="ctl"><span>Training window <output id="o-window"></output></span>
+          <input type="range" id="c-window" min="24" max="120" step="12" value="60"></label>
+        <label class="check"><input type="checkbox" id="c-expand"> Use all history (expanding window)</label>
+        <label class="ctl"><span>Retrain every</span>
+          <select id="c-refit">
+            <option value="1">month (slow)</option>
+            <option value="3">3 months</option>
+            <option value="6">6 months</option>
+            <option value="12" selected>12 months</option>
+          </select></label>
+        <label class="ctl"><span>Long best / short worst</span>
+          <select id="c-quant">
+            <option value="0.1">10% of stocks</option>
+            <option value="0.2" selected>20% of stocks</option>
+            <option value="0.3">30% of stocks</option>
+          </select></label>
+        <label class="ctl"><span>Trading cost <output id="o-cost"></output></span>
+          <input type="range" id="c-cost" min="0" max="30" step="1" value="10"></label>
+      </fieldset>
+
+      <button class="btn btn-primary run" id="run" type="button">Run backtest</button>
+      <p class="hint center-text">Results also update automatically when you change a control.</p>
+    </aside>
+
+    <!-- Results -->
+    <div class="results" id="results">
+      <div class="status" id="status" role="status" aria-live="polite">
+        <div class="bar"><i id="bar"></i></div>
+        <span id="status-text">Starting…</span>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Growth of $1</h2>
+          <div class="legend" id="legend-growth"></div>
+        </div>
+        <p class="sub">Out-of-sample only: the model had never seen any of these months when it traded them. Log scale, so equal steps are equal percentage gains. Hover or use the arrow keys to read values.</p>
+        <div class="chart" id="ch-growth"></div>
+        <details class="table-view">
+          <summary>Show as table</summary>
+          <div class="table-wrap" id="tbl-growth"></div>
+        </details>
+      </section>
+
+      <div class="two">
+        <section class="panel">
+          <div class="panel-head"><h2>Drawdown</h2></div>
+          <p class="sub">How far the long–short strategy sits below its previous peak.</p>
+          <div class="chart" id="ch-dd"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Return by predicted quintile</h2></div>
+          <p class="sub">Annualised. A good model gives a staircase: the stocks it likes most should earn the most.</p>
+          <div class="chart" id="ch-quint"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Prediction skill by month</h2>
+          <div class="legend" id="legend-ic"></div>
+        </div>
+        <p class="sub">Rank IC: the correlation between the model's ranking and what stocks actually did. Bars wobble a lot month to month; the average is what matters.</p>
+        <div class="chart" id="ch-ic"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>What the model relied on</h2></div>
+        <p class="sub">Permutation importance: shuffle one feature and see how much the model's skill drops. Because this is a simulation, we know which features are real.</p>
+        <div class="chart" id="ch-imp"><p class="muted">Computing…</p></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>What-if: score a stock</h2></div>
+        <p class="sub">Dial in a stock's features (in standard deviations from the average stock) and the trained model scores it.</p>
+        <div id="whatif"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Model race</h2></div>
+        <p class="sub">Run all four models on this exact market and strategy, each with its default setting. "IC seen → unseen" compares skill on training data with skill on months the model never saw.</p>
+        <button class="btn" id="race" type="button">Race the models</button>
+        <div class="table-wrap race-wrap"><table class="race" id="race-table" aria-live="polite"></table></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="container lab-explain">
+    <h2 class="section-title">How it works</h2>
+    <ol class="steps">
+      <li><h3>Simulate</h3><p>Each month, every stock gets six familiar features (momentum, value, quality, low volatility, reversal, size) plus any junk features you add. Next month's return is built from these plus fat-tailed noise, so the true predictability is known and you control it.</p></li>
+      <li><h3>Train, then predict</h3><p>On each date the model trains only on months that had already finished, then ranks every stock for the coming month. It is retrained on the schedule you choose, so there is no peeking at the future.</p></li>
+      <li><h3>Trade</h3><p>Buy the stocks it likes most, short the ones it likes least, equal-weighted and dollar-neutral. Costs are charged on everything traded.</p></li>
+      <li><h3>Judge</h3><p>Sharpe ratio, drawdown and rank IC on unseen months. Compare in-sample skill with out-of-sample skill to spot overfitting.</p></li>
+    </ol>
+    <div class="note">
+      <h3>Read this before drawing conclusions</h3>
+      <ul>
+        <li>The market is <strong>simulated</strong>, not real prices. It shows how methods behave when the truth is known, not whether a strategy would make money.</li>
+        <li>Real markets are noisier and their patterns decay, partly because people trade on them. The "Realistic" scenario is still generous.</li>
+        <li>A backtest with a high Sharpe ratio is easy to produce by trying many settings and keeping the best one. Try that here and watch the "Overfitting trap".</li>
+        <li>Nothing on this page is investment advice.</li>
+      </ul>
+      <p>The models (ridge, lasso, gradient-boosted trees and a small neural network) are written from scratch in JavaScript. Source: <a href="https://github.com/Devjyoti-D/devjyoti-d.github.io/tree/main/assets/lab" target="_blank" rel="noopener">assets/lab on GitHub</a>.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <p class="brand">Devjyoti Das</p>
+      <p><a href="mailto:er.devjyoti.das@gmail.com">er.devjyoti.das@gmail.com</a></p>
+    </div>
+    <div class="socials">
+      <a href="https://scholar.google.com/citations?user=61FzzCQAAAAJ&amp;hl=en" target="_blank" rel="noopener" aria-label="Google Scholar"><img src="/assets/images/Gscholar.svg" alt="" width="20" height="20"></a>
+      <a href="https://www.linkedin.com/in/devjyoti-d/" target="_blank" rel="noopener" aria-label="LinkedIn"><img src="/assets/images/link.svg" alt="" width="20" height="20"></a>
+      <a href="https://github.com/Devjyoti-D" target="_blank" rel="noopener" aria-label="GitHub"><img src="/assets/images/github.svg" alt="" width="20" height="20"></a>
+      <a href="https://x.com/Devjyoti_D" target="_blank" rel="noopener" aria-label="X (Twitter)"><img src="/assets/images/twitter.svg" alt="" width="20" height="20"></a>
+    </div>
+  </div>
+  <p class="container copyright">© <span id="year">2025</span> Devjyoti Das</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/lab/engine.js"></script>
+<script src="/assets/lab/charts.js"></script>
+<script src="/assets/lab/app.js"></script>
+</body>
+</html>
