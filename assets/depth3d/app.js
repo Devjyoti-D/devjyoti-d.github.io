@@ -378,7 +378,7 @@ function place3D() {
   if (M.group) { scene.remove(M.group); M.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); M.group = null; }
   M.mid = null;
   if (!M.on || !state.mesh || !M.pts.length) { $('dist-label').hidden = true; requestRender(); return; }
-  const g = new THREE.Group(), col = getComputedStyle(document.documentElement).getPropertyValue('--s2').trim() || '#eb6834';
+  const g = new THREE.Group(), col = getComputedStyle(document.documentElement).getPropertyValue('--s1').trim() || '#c2410c';
   const pts = M.pts.map((p) => surfacePoint(p.u, p.v));
   pts.forEach((p) => {
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.014 * state.data.long, 16, 12), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));

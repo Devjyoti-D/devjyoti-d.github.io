@@ -5,7 +5,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var T = 240, START = 60, BASE_YEAR = 2005;
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  var S1 = 'var(--s1)', S2 = 'var(--s2)', S3 = 'var(--s3)';
+  var S1 = 'var(--s1)', S2 = 'var(--s2)', MARKET = 'var(--market)';     // strategy, comparison, and the neutral market baseline
 
   var state = { model: 'ridge', paramIdx: 2, seed: 7, expand: false };
   var market = null, marketKey = '', result = null, runId = 0, timer = null;
@@ -158,14 +158,14 @@
     var tickFor = function (i) { return i === 0 ? months[0] - 1 : months[i - 1]; };
     var breakIdx = r.market.breakT >= 0 ? months.indexOf(r.market.breakT) + 1 : -1;
     legend('legend-growth', [
-      { name: 'Long–short (net of costs)', color: S1 }, { name: 'Long best stocks only', color: S2 }, { name: 'Equal-weight market', color: S3 }
+      { name: 'Long–short (net of costs)', color: S1 }, { name: 'Long best stocks only', color: S2 }, { name: 'Equal-weight market', color: MARKET }
     ]);
     C.line($('ch-growth'), {
       x: labels, height: 300, baseline: 1, log: true, xTicks: xTicks(N + 1, tickFor, 2),
       series: [
         { name: 'Long–short (net)', color: S1, values: r.eqLS },
         { name: 'Long only', color: S2, values: r.eqLong },
-        { name: 'Market', color: S3, values: r.eqBench }
+        { name: 'Market', color: MARKET, values: r.eqBench }
       ],
       marks: breakIdx > 0 ? [{ i: breakIdx, label: 'Momentum crash' }] : [],
       yFmt: function (v) { return '$' + (v < 1 ? v.toFixed(1) : v); }, tipFmt: function (v) { return '$' + v.toFixed(2); },
