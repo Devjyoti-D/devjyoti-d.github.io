@@ -6,8 +6,8 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
-import { normalizeDepth, buildMesh } from './mesh.js';
-import { readFocal35, measure as measureDist, formatMeters } from './measure.js';
+import { normalizeDepth, buildMesh } from './mesh.js?v=6';
+import { readFocal35, measure as measureDist, formatMeters } from './measure.js?v=6';
 
 const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6';
 const MODEL = 'onnx-community/depth-anything-v2-small';

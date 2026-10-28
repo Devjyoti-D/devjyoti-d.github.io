@@ -33,7 +33,8 @@ function blur(g, nx, ny, passes) {
   }
 }
 
-var RAMP = [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]];
+// Single-hue blue ramp for the depth view: far = deep navy, near = pale blue
+var RAMP = [[13, 54, 107], [24, 79, 149], [57, 135, 229], [158, 197, 244], [205, 226, 251]];
 function ramp(t) {
   var x = Math.min(0.9999, Math.max(0, t)) * (RAMP.length - 1), i = Math.floor(x), f = x - i;
   return [0, 1, 2].map(function (k) { return (RAMP[i][k] * (1 - f) + RAMP[i + 1][k] * f) / 255; });
