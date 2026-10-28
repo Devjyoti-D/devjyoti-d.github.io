@@ -118,3 +118,189 @@ export function buildMesh(depth, dw, dh, photo, o) {
   out.position = pos; out.uv = uv; out.color = col; out.depthColor = dcol; out.index = all; out.backCount = extra.length; out.solid = true;
   return out;
 }
+
+/* ---------- Full object: visible front from depth, hidden back estimated ---------- */
+
+// Blur that only averages pixels inside the mask, so the background does not bleed into the object
+function maskedBlur(g, m, nx, ny, passes) {
+  var tmp = new Float32Array(g.length);
+  for (var p = 0; p < passes; p++) {
+    for (var j = 0; j < ny; j++) for (var i = 0; i < nx; i++) {
+      var k = j * nx + i;
+      if (!m[k]) { tmp[k] = g[k]; continue; }
+      var s = 0, c = 0;
+      for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) {
+        var x = i + di, y = j + dj;
+        if (x < 0 || y < 0 || x >= nx || y >= ny || !m[y * nx + x]) continue;
+        s += g[y * nx + x]; c++;
+      }
+      tmp[k] = s / c;
+    }
+    g.set(tmp);
+  }
+}
+
+// Keep connected pieces of the mask that are at least 5% the size of the biggest one
+function keepMainParts(m, nx, ny) {
+  var lab = new Int32Array(m.length), sizes = [0], stack = [], n = 0, k, i;
+  for (k = 0; k < m.length; k++) {
+    if (!m[k] || lab[k]) continue;
+    n++; var size = 0; lab[k] = n; stack.push(k);
+    while (stack.length) {
+      var q = stack.pop(), x = q % nx, y = (q - x) / nx; size++;
+      var nb = [x > 0 ? q - 1 : -1, x < nx - 1 ? q + 1 : -1, y > 0 ? q - nx : -1, y < ny - 1 ? q + nx : -1];
+      for (i = 0; i < 4; i++) if (nb[i] >= 0 && m[nb[i]] && !lab[nb[i]]) { lab[nb[i]] = n; stack.push(nb[i]); }
+    }
+    sizes.push(size);
+  }
+  var big = Math.max.apply(null, sizes);
+  for (k = 0; k < m.length; k++) if (m[k] && sizes[lab[k]] < 0.05 * big) m[k] = 0;
+}
+
+// Close one-cell gaps (dilate, then erode) and fill holes that do not reach the border
+function closeAndFill(m, nx, ny) {
+  function morph(src, grow) {
+    var out = new Uint8Array(src.length);
+    for (var j = 0; j < ny; j++) for (var i = 0; i < nx; i++) {
+      var v = grow ? 0 : 1;
+      for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) {
+        var x = Math.min(nx - 1, Math.max(0, i + di)), y = Math.min(ny - 1, Math.max(0, j + dj));
+        if (grow) v |= src[y * nx + x]; else v &= src[y * nx + x];
+      }
+      out[j * nx + i] = v;
+    }
+    return out;
+  }
+  m.set(morph(morph(m, true), false));
+  var seen = new Uint8Array(m.length), stack = [], k;
+  for (k = 0; k < m.length; k++) {
+    var x = k % nx, y = (k - x) / nx;
+    if ((x === 0 || y === 0 || x === nx - 1 || y === ny - 1) && !m[k]) { seen[k] = 1; stack.push(k); }
+  }
+  while (stack.length) {
+    var q = stack.pop(), qx = q % nx, qy = (q - qx) / nx;
+    [qx > 0 ? q - 1 : -1, qx < nx - 1 ? q + 1 : -1, qy > 0 ? q - nx : -1, qy < ny - 1 ? q + nx : -1].forEach(function (nb) {
+      if (nb >= 0 && !m[nb] && !seen[nb]) { seen[nb] = 1; stack.push(nb); }
+    });
+  }
+  for (k = 0; k < m.length; k++) if (!m[k] && !seen[k]) m[k] = 1;
+}
+
+// "Inflate" the silhouette: solve laplacian(phi) = -1 inside, phi = 0 outside (SOR).
+// sqrt(2 phi) is the half-thickness of a round cross-section: a strip W cells wide gets W/2.
+function inflate(m, nx, ny) {
+  var phi = new Float32Array(m.length), w = 1.9, iters = Math.max(200, 3 * Math.max(nx, ny)), it, i, j, k;
+  for (it = 0; it < iters; it++) {
+    for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) {
+      k = j * nx + i;
+      if (!m[k]) continue;
+      var s = (i > 0 ? phi[k - 1] : 0) + (i < nx - 1 ? phi[k + 1] : 0) + (j > 0 ? phi[k - nx] : 0) + (j < ny - 1 ? phi[k + nx] : 0);
+      phi[k] += w * ((s + 1) / 4 - phi[k]);
+    }
+  }
+  for (k = 0; k < m.length; k++) phi[k] = m[k] ? Math.sqrt(2 * Math.max(0, phi[k])) : 0;
+  return phi;
+}
+
+/* mask: Uint8Array (non-zero = object), size mw x mh.  o: res, strength (front relief as a fraction of
+   the object's size), smooth, round (back depth: 1 = round cross-sections, as deep as the object is wide).
+   The front follows the predicted depth; the hidden back mirrors it, pushed back by the inflated thickness.
+   Returns the same shape as buildMesh, plus center and size of the object (world units). */
+export function buildObject(depth, dw, dh, mask, mw, mh, photo, o) {
+  var aspect = photo.w / photo.h, long = Math.max(aspect, 1), nx, ny, i, j, k;
+  if (aspect >= 1) { nx = o.res; ny = Math.max(2, Math.round(o.res / aspect)); }
+  else { ny = o.res; nx = Math.max(2, Math.round(o.res * aspect)); }
+  var N = nx * ny, m = new Uint8Array(N), d = new Float32Array(N);
+  for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) {
+    k = j * nx + i;
+    m[k] = mask[Math.round(j / (ny - 1) * (mh - 1)) * mw + Math.round(i / (nx - 1) * (mw - 1))] ? 1 : 0;
+    d[k] = bilinear(depth, dw, dh, i / (nx - 1), j / (ny - 1));
+  }
+  closeAndFill(m, nx, ny);
+  keepMainParts(m, nx, ny);
+
+  // Depth range and bounding box of the object
+  var vals = [], i0 = nx, i1 = 0, j0 = ny, j1 = 0;
+  for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) if (m[j * nx + i]) {
+    vals.push(d[j * nx + i]);
+    if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j;
+  }
+  if (vals.length < 12) return { V: 0 };
+  vals.sort(function (a, b) { return a - b; });
+  var lo = vals[Math.floor(vals.length * 0.05)], hi = vals[Math.floor(vals.length * 0.98)], span = hi - lo || 1;
+  var cell = aspect / (nx - 1);                                          // world units per grid step
+  var objSize = Math.max(i1 - i0, j1 - j0) * cell;
+
+  // Front relief from depth (re-scaled within the object), plus a heavily smoothed copy for the back
+  // (a few extra passes soften cliffs where one part overlaps another, e.g. a head in front of a body)
+  maskedBlur(d, m, nx, ny, o.smooth + 3);
+  var zf = new Float32Array(N);
+  // (0.7: the inflated thickness already adds roundness, so the depth relief needs less than in "Whole photo")
+  for (k = 0; k < N; k++) zf[k] = Math.min(1, Math.max(0, (d[k] - lo) / span)) * o.strength * 0.7 * objSize;
+  var zs = zf.slice();
+  maskedBlur(zs, m, nx, ny, 10);
+  var hc = inflate(m, nx, ny), h = new Float32Array(N);                  // hc in grid cells
+  for (k = 0; k < N; k++) h[k] = hc[k] * cell * o.round;
+
+  // Triangles over the mask (cells with 3 of 4 corners inside get one triangle, for a smoother outline)
+  var idx = [];
+  for (j = 0; j < ny - 1; j++) for (i = 0; i < nx - 1; i++) {
+    var tl = j * nx + i, tr = tl + 1, bl = tl + nx, br = bl + 1, a = m[tl], b = m[tr], c = m[bl], e = m[br];
+    if (a + b + c + e < 3) continue;
+    if (a && c && e) idx.push(tl, bl, br);
+    if (a && e && b) idx.push(tl, br, tr);
+    if (!a) idx.push(bl, br, tr);
+    if (!e) idx.push(tl, bl, tr);
+  }
+  var remap = new Int32Array(N).fill(-1), V = 0;
+  for (i = 0; i < idx.length; i++) if (remap[idx[i]] < 0) remap[idx[i]] = V++;
+  if (!V) return { V: 0 };
+
+  // Vertices 0..V-1 are the front, V..2V-1 the back
+  var pos = new Float32Array(V * 6), uv = new Float32Array(V * 4), col = new Float32Array(V * 6), dcol = new Float32Array(V * 6);
+  var zmin = Infinity, zmax = -Infinity;
+  for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) {
+    var src = j * nx + i, f = remap[src];
+    if (f < 0) continue;
+    var u = i / (nx - 1), v = j / (ny - 1), x = (u - 0.5) * aspect, y = 0.5 - v;
+    var zF = zf[src] + h[src], zB = Math.min(zs[src], zf[src]) - h[src];
+    // Near the outline, take the colour from a little further inside so background pixels are not smeared
+    var tu = u, tv = v;
+    if (hc[src] < 2.5) {
+      var gx = hc[j * nx + Math.min(nx - 1, i + 1)] - hc[j * nx + Math.max(0, i - 1)];
+      var gy = hc[Math.min(ny - 1, j + 1) * nx + i] - hc[Math.max(0, j - 1) * nx + i], gl = Math.hypot(gx, gy);
+      if (gl > 0) { var st = (2.5 - hc[src]) * 0.8 / gl; tu = Math.min(1, Math.max(0, u + gx * st / (nx - 1))); tv = Math.min(1, Math.max(0, v + gy * st / (ny - 1))); }
+    }
+    var px = Math.min(photo.w - 1, Math.round(tu * (photo.w - 1))), py = Math.min(photo.h - 1, Math.round(tv * (photo.h - 1))), p = (py * photo.w + px) * 4;
+    [[f, zF], [f + V, zB]].forEach(function (q) {
+      var n = q[0];
+      pos[n * 3] = x; pos[n * 3 + 1] = y; pos[n * 3 + 2] = q[1];
+      uv[n * 2] = tu; uv[n * 2 + 1] = 1 - tv;
+      col[n * 3] = photo.data[p] / 255; col[n * 3 + 1] = photo.data[p + 1] / 255; col[n * 3 + 2] = photo.data[p + 2] / 255;
+    });
+    zmin = Math.min(zmin, zB); zmax = Math.max(zmax, zF);
+  }
+  for (var n = 0; n < 2 * V; n++) {
+    var rc = ramp((pos[n * 3 + 2] - zmin) / (zmax - zmin || 1));
+    dcol[n * 3] = rc[0]; dcol[n * 3 + 1] = rc[1]; dcol[n * 3 + 2] = rc[2];
+  }
+
+  // Front faces, back faces (reversed), and a seam joining them along the outline
+  var T = idx.length, tris = [], edges = new Map(), key;
+  for (i = 0; i < T; i++) tris.push(remap[idx[i]]);
+  function addEdge(p1, p2) {
+    key = p1 < p2 ? p1 * V + p2 : p2 * V + p1;
+    var ed = edges.get(key);
+    if (ed) ed.n++; else edges.set(key, { a: p1, b: p2, n: 1 });
+  }
+  for (i = 0; i < T; i += 3) { addEdge(tris[i], tris[i + 1]); addEdge(tris[i + 1], tris[i + 2]); addEdge(tris[i + 2], tris[i]); }
+  for (i = 0; i < T; i += 3) tris.push(tris[i] + V, tris[i + 2] + V, tris[i + 1] + V);
+  edges.forEach(function (ed) { if (ed.n === 1) tris.push(ed.a, ed.a + V, ed.b + V, ed.a, ed.b + V, ed.b); });
+
+  var cx = ((i0 + i1) / 2 / (nx - 1) - 0.5) * aspect, cy = 0.5 - (j0 + j1) / 2 / (ny - 1);
+  return {
+    V: 2 * V, nx: nx, ny: ny, aspect: aspect, long: long, object: true,
+    position: pos, uv: uv, color: col, depthColor: dcol, index: Uint32Array.from(tris), frontCount: tris.length, backCount: 0,
+    center: [cx, cy, (zmin + zmax) / 2], size: [(i1 - i0) * cell, (j1 - j0) * cell, zmax - zmin], zmax: zmax - zmin
+  };
+}

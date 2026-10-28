@@ -67,3 +67,9 @@
 .facts dd { margin: 0; font: 600 18px var(--font-head); font-variant-numeric: tabular-nums; }
 
 .ctl[hidden] { display: none; }
+
+/* Object selection */
+.photo-wrap.selecting { cursor: crosshair; touch-action: none; }
+.overlay rect { fill: color-mix(in srgb, var(--accent) 18%, transparent); stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.photo-wrap canvas.overlay[hidden] { display: none; }
+#kinds { margin-bottom: 12px; }

@@ -6,16 +6,19 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
-import { normalizeDepth, buildMesh } from './mesh.js?v=6';
-import { readFocal35, measure as measureDist, formatMeters } from './measure.js?v=6';
+import { normalizeDepth, buildMesh, buildObject } from './mesh.js?v=7';
+import { readFocal35, measure as measureDist, formatMeters } from './measure.js?v=7';
 
 const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6';
 const MODEL = 'onnx-community/depth-anything-v2-small';
+const SAM_MODEL = 'Xenova/slimsam-77-uniform';
 const MAX_SIDE = 1024;
 const MAX_BYTES = 20 * 1024 * 1024;
 
 const $ = (id) => document.getElementById(id);
-const state = { photoCanvas: null, photo: null, depth: null, mesh: null, data: null, mode: 'texture', job: 0, device: '', imageId: 0 };
+const state = { photoCanvas: null, photo: null, depth: null, mesh: null, data: null, mode: 'texture', kind: 'object', job: 0, device: '', imageId: 0 };
+// Object selection (Segment Anything): clicked points (0..1 image coords), resulting mask, cached image embedding
+const S = { model: null, proc: null, emb: null, inputs: null, embId: 0, pts: [], box: null, mask: null, busy: false };
 // Distance tool: scene type, camera focal length (35 mm equiv.), calibration scale, picked points, metric depth maps per scene
 const M = { on: false, scene: 'indoor', f35: 26, f35From: 'assumed', scale: 1, pts: [], maps: {}, est: null, estScene: '', group: null, mid: null, result: null };
 let dlLabel = 'the depth model';
@@ -30,7 +33,7 @@ function setStatus(text, frac) {
 
 /* ---------- Viewer ---------- */
 
-let renderer, scene, camera, controls, texture, points = null, raf = 0, wiggle = true, baseDist = 2;
+let renderer, scene, camera, controls, texture, points = null, raf = 0, wiggle = true, baseDist = 2, ambient, key, head;
 const viewer = $('viewer');
 const mats = {};
 
@@ -44,10 +47,13 @@ function initViewer() {
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(35, 1, 0.01, 50);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-  const key = new THREE.DirectionalLight(0xffffff, 0.55);
+  ambient = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambient);
+  key = new THREE.DirectionalLight(0xffffff, 0.55);
   key.position.set(-1, 1.5, 2);
   scene.add(key);
+  head = new THREE.DirectionalLight(0xffffff, 0);          // follows the camera, used for the clay view
+  camera.add(head); scene.add(camera);
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
   controls.addEventListener('change', requestRender);
@@ -79,7 +85,8 @@ function requestRender() { if (!raf) raf = requestAnimationFrame(frame); }
 function frame(t) {
   raf = 0;
   if (wiggle && state.mesh) {
-    const a = 0.45 * Math.sin(t * 0.0012), e = 0.12 * Math.sin(t * 0.0007 + 1);
+    const full = state.data && state.data.object;     // full objects turn all the way round to show the estimated back
+    const a = full ? t * 0.0005 : 0.45 * Math.sin(t * 0.0012), e = full ? 0.3 : 0.12 * Math.sin(t * 0.0007 + 1);
     camera.position.set(Math.sin(a) * baseDist, Math.sin(e) * baseDist * 0.6, Math.cos(a) * baseDist);
     camera.lookAt(0, 0, 0);
     controls.update();
@@ -91,8 +98,8 @@ function frame(t) {
 
 function fitCamera() {
   const m = state.data, tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const w = m.aspect * 1.15, h = 1.15;
-  baseDist = Math.max(h / 2 / tan, w / 2 / (tan * camera.aspect)) + m.zmax * 0.6;
+  const w = (m.object ? Math.max(m.size[0], m.size[2]) : m.aspect) * 1.15, h = (m.object ? m.size[1] : 1) * 1.15;
+  baseDist = Math.max(h / 2 / tan, w / 2 / (tan * camera.aspect)) + m.zmax * (m.object ? 0.5 : 0.6);
   camera.position.set(0, 0, baseDist);
   camera.near = baseDist / 50; camera.far = baseDist * 10;
   camera.updateProjectionMatrix();
@@ -107,11 +114,14 @@ const toLinear = (a) => { const o = new Float32Array(a.length); for (let i = 0; 
 
 function applyMode() {
   if (!state.mesh) return;
-  const m = state.mode, solid = !!state.data.solid;
-  const front = m === 'texture' ? new THREE.MeshLambertMaterial({ map: texture })
-    : m === 'depth' ? new THREE.MeshLambertMaterial({ vertexColors: true })
+  const m = state.mode, solid = !!state.data.solid, side = state.data.object ? THREE.DoubleSide : THREE.FrontSide;
+  const front = m === 'texture' ? new THREE.MeshLambertMaterial({ map: texture, side })
+    : m === 'depth' ? new THREE.MeshLambertMaterial({ vertexColors: true, side })
+    : m === 'clay' ? new THREE.MeshLambertMaterial({ color: 0xc4c7cf, side })
     : new THREE.MeshBasicMaterial({ color: accent(), wireframe: true });
-  const back = m === 'texture' ? new THREE.MeshLambertMaterial({ color: 0x8c909c })
+  const clay = m === 'clay';
+  ambient.intensity = clay ? 0.35 : 0.8; key.intensity = clay ? 0.7 : 0.55; head.intensity = clay ? 0.9 : 0;
+  const back = m === 'texture' || m === 'clay' ? new THREE.MeshLambertMaterial({ color: clay ? 0xc4c7cf : 0x8c909c })
     : m === 'depth' ? new THREE.MeshLambertMaterial({ vertexColors: true })
     : new THREE.MeshBasicMaterial({ color: accent(), wireframe: true });
   [].concat(state.mesh.material).forEach((x) => x.dispose());
@@ -127,8 +137,17 @@ function rebuild() {
     res: +$('c-res').value, strength: +$('c-strength').value, smooth: +$('c-smooth').value, cutoff: +$('c-cutoff').value,
     edge: +$('c-edge').value, invert: $('c-invert').checked, solid: $('c-solid').checked, thickness: +$('c-thick').value
   };
-  const d = buildMesh(state.depth.data, state.depth.w, state.depth.h, state.photo, o);
-  if (!d.V) { setStatus('Nothing left to show. Lower "Remove background" or "Cut stretched edges".', 0); return; }
+  let d;
+  if (state.kind === 'object') {
+    if (!S.mask) return;
+    o.round = +$('c-round').value;
+    d = buildObject(state.depth.data, state.depth.w, state.depth.h, S.mask.data, S.mask.w, S.mask.h, state.photo, o);
+    if (!d.V) { setStatus('The selected area is too small. Click the middle of the object on your photo.', 0); return; }
+  } else {
+    d = buildMesh(state.depth.data, state.depth.w, state.depth.h, state.photo, o);
+    if (!d.V) { setStatus('Nothing left to show. Lower "Remove background" or "Cut stretched edges".', 0); return; }
+    d.center = [0, 0, d.zmax / 2];
+  }
   state.data = d;
 
   const geo = new THREE.BufferGeometry();
@@ -143,14 +162,14 @@ function rebuild() {
   if (state.mesh) { state.mesh.geometry.dispose(); scene.remove(state.mesh); }
   if (points) { points.geometry.dispose(); points.material.dispose(); scene.remove(points); }
   state.mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial());
-  state.mesh.position.z = -d.zmax / 2;
+  state.mesh.position.set(-d.center[0], -d.center[1], -d.center[2]);
   scene.add(state.mesh);
 
   const pg = new THREE.BufferGeometry();
   pg.setAttribute('position', new THREE.BufferAttribute(d.position.subarray(0, d.V * 3), 3));
   pg.setAttribute('color', new THREE.BufferAttribute(toLinear(d.color.subarray(0, d.V * 3)), 3));
   points = new THREE.Points(pg, new THREE.PointsMaterial({ size: 1.7 * d.long / o.res, vertexColors: true, sizeAttenuation: true }));
-  points.position.z = state.mesh.position.z;
+  points.position.copy(state.mesh.position);
   scene.add(points);
 
   applyMode();
@@ -258,6 +277,11 @@ async function processSource(src, revoke) {
     const dims = out.predicted_depth.dims, dh = dims[dims.length - 2], dw = dims[dims.length - 1];
     state.depth = { data: normalizeDepth(out.predicted_depth.data, dw, dh), w: dw, h: dh };
     drawDepthThumb();
+    S.pts = [{ u: 0.5, v: 0.5 }]; S.box = null; S.mask = null; drawMask();
+    if (state.kind === 'object') {
+      await segment();
+      if (job !== state.job) return;
+    }
 
     if (texture) texture.dispose();
     texture = new THREE.CanvasTexture(cv);
@@ -300,6 +324,128 @@ function handleFile(file) {
   if (file.size > MAX_BYTES) { setStatus('That image is over 20 MB. Please use a smaller one.', 0); return; }
   processSource(URL.createObjectURL(file), true);
 }
+
+/* ---------- Object selection (Segment Anything) ---------- */
+
+function loadSam() {
+  return serial(async () => {
+    if (S.model) return;
+    tf = tf || await import(TF_URL);
+    dlLabel = 'the object-selection model'; Object.keys(files).forEach((k) => delete files[k]);
+    setStatus('Loading the object-selection model…', 0.05);
+    tf.env.allowLocalModels = false; tf.env.allowRemoteModels = true;
+    S.proc = await tf.AutoProcessor.from_pretrained(SAM_MODEL);
+    S.model = await tf.SamModel.from_pretrained(SAM_MODEL, { device: 'wasm', dtype: 'q8', progress_callback: onProgress });
+  });
+}
+
+// One decoder pass. pts: [{u, v, l}] in 0..1 image coords; l = 1 object, 0 not object, 2 and 3 box corners
+async function samPass(pts) {
+  const [rh, rw] = S.inputs.reshaped_input_sizes[0];
+  const out = await S.model({
+    ...S.emb,
+    input_points: new tf.Tensor('float32', pts.flatMap((p) => [p.u * rw, p.v * rh]), [1, 1, pts.length, 2]),
+    input_labels: new tf.Tensor('int64', pts.map((p) => BigInt(p.l)), [1, 1, pts.length])
+  });
+  const t = (await S.proc.post_process_masks(out.pred_masks, S.inputs.original_sizes, S.inputs.reshaped_input_sizes))[0];
+  const h = t.dims[t.dims.length - 2], w = t.dims[t.dims.length - 1], n = w * h;
+  return Array.from(out.iou_scores.data, (score, c) => {
+    const data = Uint8Array.from(t.data.subarray(c * n, (c + 1) * n));
+    let area = 0, x0 = w, x1 = 0, y0 = h, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (data[y * w + x]) {
+      area++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return { data, w, h, score, area: area / n, box: { u0: x0 / w, v0: y0 / h, u1: (x1 + 1) / w, v1: (y1 + 1) / h } };
+  });
+}
+
+// Cut out the object at S.pts (or inside S.box). SAM is most reliable with a box, so without one we first
+// find the object roughly (clicks plus "not this" hints in the corners), then refine with its bounding box.
+async function segment() {
+  const img = state.imageId;
+  S.busy = true; setPhotoSub();
+  try {
+    await loadSam();
+    const mask = await serial(async () => {
+      if (S.embId !== img) {
+        setStatus('Finding the object…', 0.8);
+        await new Promise((r) => setTimeout(r, 30));
+        const blob = await new Promise((r) => state.photoCanvas.toBlob(r, 'image/jpeg', 0.92)), url = URL.createObjectURL(blob);
+        try { S.inputs = await S.proc(await tf.RawImage.read(url)); } finally { URL.revokeObjectURL(url); }
+        S.emb = await S.model.get_image_embeddings(S.inputs); S.embId = img;
+      }
+      const usable = (m) => m.area > 0.002 && m.area <= 0.6;
+      const pos = S.pts.map((p) => ({ u: p.u, v: p.v, l: 1 }));
+      let box = S.box, rough = null;
+      if (!box) {
+        const corners = [[0.02, 0.02], [0.98, 0.02], [0.02, 0.98], [0.98, 0.98]]
+          .filter(([u, v]) => !pos.some((p) => Math.abs(p.u - u) < 0.15 && Math.abs(p.v - v) < 0.15)).map(([u, v]) => ({ u, v, l: 0 }));
+        const c1 = await samPass(pos.concat(corners));
+        // a single click often scores a small part highest, so take the largest confident mask
+        rough = c1.filter((m) => m.score >= 0.5 && usable(m)).sort((x, y) => y.area - x.area)[0] || c1.slice().sort((x, y) => y.score - x.score)[0];
+        const b = rough.box, pad = 0.04;
+        box = { u0: Math.max(0, b.u0 - pad), v0: Math.max(0, b.v0 - pad), u1: Math.min(1, b.u1 + pad), v1: Math.min(1, b.v1 + pad) };
+      }
+      const c2 = await samPass(pos.concat([{ u: box.u0, v: box.v0, l: 2 }, { u: box.u1, v: box.v1, l: 3 }]));
+      return c2.filter(usable).sort((x, y) => y.score - x.score)[0] || rough || c2.slice().sort((x, y) => y.score - x.score)[0];
+    });
+    if (img !== state.imageId) return null;
+    S.mask = mask; drawMask();
+    return mask;
+  } catch (e) {
+    console.error(e);
+    setStatus('Could not select the object: ' + (e && e.message ? e.message : e), 0);
+    return null;
+  } finally { S.busy = false; setPhotoSub(); }
+}
+
+function drawMask() {
+  const c = $('cv-mask'), ctx = c.getContext('2d');
+  if (!S.mask || state.kind !== 'object' || M.on) { c.hidden = true; return; }
+  const { data, w, h } = S.mask;
+  c.width = w; c.height = h; c.hidden = false;
+  const col = accent().replace('#', ''), r = parseInt(col.slice(0, 2), 16), g = parseInt(col.slice(2, 4), 16), b = parseInt(col.slice(4, 6), 16);
+  const im = ctx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) if (data[i]) { im.data[i * 4] = r; im.data[i * 4 + 1] = g; im.data[i * 4 + 2] = b; im.data[i * 4 + 3] = 110; }
+  ctx.putImageData(im, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#' + col; ctx.lineWidth = Math.max(2, w / 300);
+  if (S.box) { ctx.setLineDash([6, 4]); ctx.strokeRect(S.box.u0 * w, S.box.v0 * h, (S.box.u1 - S.box.u0) * w, (S.box.v1 - S.box.v0) * h); ctx.setLineDash([]); }
+  else S.pts.forEach((p) => { ctx.beginPath(); ctx.arc(p.u * w, p.v * h, Math.max(5, w / 120), 0, 7); ctx.fill(); ctx.stroke(); });
+}
+
+function setPhotoSub() {
+  $('photo-sub').textContent = M.on ? 'Click two points on the photo to measure between them.'
+    : state.kind !== 'object' ? 'Switch on "Measure distance" to click points here.'
+    : S.busy ? 'Finding the object…'
+    : 'Click the object you want in 3D, or drag a box around it. Shift-click to add a missed part.';
+  $('photo-wrap').classList.toggle('selecting', state.kind === 'object' && !M.on);
+}
+
+// box: {u0, v0, u1, v1} from a drag on the photo; otherwise a click at (u, v)
+async function selectAt(u, v, add, box) {
+  if (!state.depth || S.busy) return;
+  const p = { u: Math.min(1, Math.max(0, u)), v: Math.min(1, Math.max(0, v)) };
+  S.pts = add && !S.box ? S.pts.concat(p) : [p];
+  S.box = box || null;
+  const m = await segment();
+  if (!m) return;
+  rebuild(); fitCamera(); requestRender();
+  setStatus('Object selected · ' + (state.data ? state.data.V.toLocaleString() : 0) + ' points. Drag the view to see the estimated back.', 1);
+}
+
+async function setKind(kind) {
+  if (kind === state.kind) return;
+  state.kind = kind;
+  document.querySelectorAll('#kinds .chip').forEach((x) => { const a = x.dataset.kind === kind; x.classList.toggle('active', a); x.setAttribute('aria-checked', a); });
+  syncLabels(); setPhotoSub(); drawMask();
+  if (!state.depth) return;
+  if (kind === 'object' && !S.mask) { await segment(); if (state.kind !== kind) return; }
+  rebuild(); if (state.data) fitCamera();
+  wiggle = $('c-wiggle').checked; requestRender();
+  if (state.data) setStatus(kind === 'object' ? 'Full object · drag the view to see the estimated back.' : 'Whole photo as a 3D relief.', 1);
+}
+
+$('kinds').addEventListener('click', (e) => { const c = e.target.closest('.chip'); if (c) setKind(c.dataset.kind); });
 
 /* ---------- Distance measurement ---------- */
 
@@ -369,9 +515,9 @@ function pick3D(e) {
 function surfacePoint(u, v) {
   const d = state.data, x = (u - 0.5) * d.aspect, y = 0.5 - v;
   state.mesh.updateMatrixWorld(true);
-  const ray = new THREE.Raycaster(new THREE.Vector3(x, y, 50), new THREE.Vector3(0, 0, -1));
+  const ray = new THREE.Raycaster(state.mesh.localToWorld(new THREE.Vector3(x, y, 50)), new THREE.Vector3(0, 0, -1));
   const hit = ray.intersectObject(state.mesh).find((h) => h.face && h.face.materialIndex === 0);
-  return hit ? hit.point.clone() : new THREE.Vector3(x, y, state.mesh.position.z + d.zmax * 0.3);
+  return hit ? hit.point.clone() : state.mesh.localToWorld(new THREE.Vector3(x, y, d.center[2] + d.zmax * 0.3));
 }
 
 function place3D() {
@@ -456,8 +602,9 @@ function setMeasureOn(on) {
   $('measure-opts').hidden = !on;
   $('photo-wrap').classList.toggle('measuring', on);
   viewer.classList.toggle('measuring', on);
-  $('photo-sub').textContent = on ? 'Click two points on the photo to measure between them.' : 'Switch on "Measure distance" to click points here.';
+  setPhotoSub();
   if (on) { wiggle = false; $('c-wiggle').checked = false; ensureMetric(); }
+  drawMask();
   updateMeasureUI();
 }
 
@@ -478,11 +625,36 @@ $('calibrate').addEventListener('click', () => {
   M.scale = known / r.raw;
   syncMeasureLabels(); updateMeasureUI();
 });
-$('photo-wrap').addEventListener('click', (e) => {
-  if (!M.on) return;
+function photoUV(e) {
   const r = $('cv-photo').getBoundingClientRect();
-  setPoint((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  return { u: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), v: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+}
+$('photo-wrap').addEventListener('click', (e) => { if (M.on) { const p = photoUV(e); setPoint(p.u, p.v); } });
+// Object selection on the photo: click a point, or drag a box
+let drag = null;
+const wrap = $('photo-wrap'), boxEl = $('ov-box');
+wrap.addEventListener('pointerdown', (e) => {
+  if (M.on || state.kind !== 'object' || !state.depth || S.busy || e.button !== 0) return;
+  drag = photoUV(e); drag.moved = false; e.preventDefault();
+  try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
 });
+wrap.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const p = photoUV(e), u0 = Math.min(p.u, drag.u), v0 = Math.min(p.v, drag.v), du = Math.abs(p.u - drag.u), dv = Math.abs(p.v - drag.v);
+  if (du + dv > 0.03) drag.moved = true;
+  if (!drag.moved) return;
+  boxEl.setAttribute('x', u0 * 100); boxEl.setAttribute('y', v0 * 100); boxEl.setAttribute('width', du * 100); boxEl.setAttribute('height', dv * 100);
+  boxEl.setAttribute('visibility', 'visible');
+});
+wrap.addEventListener('pointerup', (e) => {
+  if (!drag) return;
+  const d = drag, p = photoUV(e); drag = null;
+  boxEl.setAttribute('visibility', 'hidden');
+  if (!d.moved) { selectAt(d.u, d.v, e.shiftKey); return; }
+  const box = { u0: Math.min(p.u, d.u), v0: Math.min(p.v, d.v), u1: Math.max(p.u, d.u), v1: Math.max(p.v, d.v) };
+  selectAt((box.u0 + box.u1) / 2, (box.v0 + box.v1) / 2, false, box);
+});
+wrap.addEventListener('pointercancel', () => { drag = null; boxEl.setAttribute('visibility', 'hidden'); });
 
 /* ---------- Export ---------- */
 
@@ -530,13 +702,16 @@ function syncLabels() {
   $('o-cutoff').textContent = $('c-cutoff').value > 0 ? Math.round($('c-cutoff').value * 100) + '%' : 'off';
   $('o-edge').textContent = $('c-edge').value > 0 ? Math.round($('c-edge').value * 100) + '%' : 'off';
   $('o-thick').textContent = Math.round($('c-thick').value * 100) + '%';
+  $('o-round').textContent = Math.round($('c-round').value * 100) + '%';
   $('thick-wrap').hidden = !$('c-solid').checked;
+  $('relief-opts').hidden = state.kind === 'object';
+  $('object-opts').hidden = state.kind !== 'object';
 }
 
 let rebuildTimer = null;
 function scheduleRebuild() { clearTimeout(rebuildTimer); rebuildTimer = setTimeout(rebuild, 60); }
 
-['c-strength', 'c-res', 'c-smooth', 'c-cutoff', 'c-edge', 'c-thick'].forEach((id) => $(id).addEventListener('input', () => { syncLabels(); scheduleRebuild(); }));
+['c-strength', 'c-res', 'c-smooth', 'c-cutoff', 'c-edge', 'c-thick', 'c-round'].forEach((id) => $(id).addEventListener('input', () => { syncLabels(); scheduleRebuild(); }));
 ['c-invert', 'c-solid'].forEach((id) => $(id).addEventListener('change', () => { syncLabels(); scheduleRebuild(); }));
 
 $('modes').addEventListener('click', (e) => {
@@ -567,4 +742,4 @@ syncLabels();
 if (!initViewer()) { $('pick').disabled = true; }
 const start = new URLSearchParams(location.search).get('sample');
 if (start === 'cattle') processSource('/assets/images/L1.jpg', false);
-window.__lab3d = state; state.measure = M;       // handy for debugging in the console
+window.__lab3d = state; state.measure = M; state.sel = S;       // handy for debugging in the console

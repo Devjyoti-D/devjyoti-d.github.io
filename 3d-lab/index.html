@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="/assets/site.css?v=5">
   <link rel="stylesheet" href="/assets/lab.css?v=5">
-  <link rel="stylesheet" href="/assets/depth3d.css?v=5">
+  <link rel="stylesheet" href="/assets/depth3d.css?v=6">
   <script>
     // Apply saved/system theme before paint to avoid a flash
     (function () {
@@ -63,10 +63,11 @@
   <section class="container lab-hero">
     <p class="eyebrow">3D Lab · Computer vision in your browser</p>
     <h1>Turn a photo into a 3D model</h1>
-    <p class="bio">Upload an image and a neural network estimates how far away every pixel is, then lifts the photo into 3D. Spin it around, tweak the shape, and download it. It all runs <strong>on your device</strong>: your image is never uploaded.</p>
+    <p class="bio">Upload an image and click the object you want. Neural networks cut it out and estimate how far away every part is, then the hidden back is guessed to give a full 3D model. Spin it around, tweak the shape, and download it. It all runs <strong>on your device</strong>: your image is never uploaded.</p>
     <div class="badges">
       <span class="tag">Private: nothing leaves your browser</span>
       <span class="tag">Depth Anything V2</span>
+      <span class="tag">Segment Anything</span>
       <span class="tag">Export GLB · OBJ · PLY · STL</span>
     </div>
   </section>
@@ -87,12 +88,23 @@
 
       <fieldset id="shape" disabled>
         <legend>2 · Shape</legend>
+        <div class="filters" id="kinds" role="radiogroup" aria-label="What to turn into 3D">
+          <button class="chip active" role="radio" aria-checked="true" data-kind="object" type="button">Full object</button>
+          <button class="chip" role="radio" aria-checked="false" data-kind="relief" type="button">Whole photo</button>
+        </div>
+        <div id="object-opts">
+          <p class="hint"><strong>Full object</strong> cuts out one object and estimates its hidden back. To choose a different object, click it or drag a box around it on your photo below the viewer.</p>
+          <label class="ctl"><span>Back depth <output id="o-round"></output></span>
+            <input type="range" id="c-round" min="0.2" max="1.6" step="0.05" value="0.8"></label>
+          <p class="hint">How deep the guessed back is. 100% gives round cross-sections, as deep as the object is wide.</p>
+        </div>
         <label class="ctl"><span>Depth strength <output id="o-strength"></output></span>
           <input type="range" id="c-strength" min="0.05" max="0.8" step="0.05" value="0.3"></label>
         <label class="ctl"><span>Mesh detail <output id="o-res"></output></span>
           <input type="range" id="c-res" min="64" max="320" step="32" value="160"></label>
         <label class="ctl"><span>Smoothing <output id="o-smooth"></output></span>
           <input type="range" id="c-smooth" min="0" max="6" step="1" value="2"></label>
+        <div id="relief-opts" hidden>
         <label class="ctl"><span>Remove background <output id="o-cutoff"></output></span>
           <input type="range" id="c-cutoff" min="0" max="0.9" step="0.05" value="0"></label>
         <p class="hint">Drag right to cut away the farthest pixels and keep just the nearest object.</p>
@@ -102,12 +114,14 @@
         <label class="check"><input type="checkbox" id="c-solid"> Solid back (for 3D printing)</label>
         <label class="ctl" id="thick-wrap" hidden><span>Thickness <output id="o-thick"></output></span>
           <input type="range" id="c-thick" min="0.02" max="0.4" step="0.02" value="0.1"></label>
+        </div>
       </fieldset>
 
       <fieldset id="view" disabled>
         <legend>3 · View</legend>
         <div class="filters" id="modes" role="radiogroup" aria-label="Display mode">
           <button class="chip active" role="radio" aria-checked="true" data-mode="texture" type="button">Textured</button>
+          <button class="chip" role="radio" aria-checked="false" data-mode="clay" type="button">Clay</button>
           <button class="chip" role="radio" aria-checked="false" data-mode="depth" type="button">Depth</button>
           <button class="chip" role="radio" aria-checked="false" data-mode="wire" type="button">Wireframe</button>
           <button class="chip" role="radio" aria-checked="false" data-mode="points" type="button">Points</button>
@@ -182,7 +196,8 @@
           <p class="sub" id="photo-sub">Switch on "Measure distance" to click points here.</p>
           <div class="photo-wrap" id="photo-wrap">
             <canvas id="cv-photo" class="thumb" aria-label="Your photo. In measure mode, click to place points."></canvas>
-            <svg class="overlay" id="photo-ov" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line id="ov-line" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/></svg>
+            <canvas class="overlay" id="cv-mask" hidden></canvas>
+            <svg class="overlay" id="photo-ov" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line id="ov-line" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/><rect id="ov-box" x="0" y="0" width="0" height="0" visibility="hidden"/></svg>
             <i class="pt" id="pt-a" hidden>A</i><i class="pt" id="pt-b" hidden>B</i>
           </div>
         </section>
@@ -198,9 +213,9 @@
   <section class="container lab-explain">
     <h2 class="section-title">How it works</h2>
     <ol class="steps">
-      <li><h3>Estimate depth</h3><p>A neural network (Depth Anything V2, Small) looks at the photo and predicts, for every pixel, how near or far it is. People can do this too: we use shading, perspective and familiar object sizes.</p></li>
-      <li><h3>Lift to 3D</h3><p>Each pixel becomes a point on a grid, pushed out toward you by its predicted depth. Neighbouring points are joined into triangles, and the photo is draped over them as a texture.</p></li>
-      <li><h3>Clean up</h3><p>Smoothing removes noise. Triangles that stretch across a big depth jump are cut, and far pixels can be removed to isolate the object. A back plane and walls make it solid.</p></li>
+      <li><h3>Find the object and its depth</h3><p>Segment Anything (SlimSAM) cuts out the object you click. Depth Anything V2 predicts how near or far every pixel is. People do this too, using shading, perspective and familiar sizes.</p></li>
+      <li><h3>Lift to 3D</h3><p>Each pixel becomes a point pushed out toward you by its depth, giving the visible front. The hidden back is guessed by "inflating" the outline, so wide parts get thick and thin parts like legs stay thin. Front and back are then stitched into one closed shape.</p></li>
+      <li><h3>Clean up</h3><p>Smoothing removes noise, and the photo is draped over the model as a texture. In "Whole photo" mode, triangles that stretch across big depth jumps are cut instead, and a flat back can be added.</p></li>
       <li><h3>Export</h3><p>Download the mesh as GLB, OBJ, PLY or STL for Blender, game engines, or a slicer for 3D printing.</p></li>
     </ol>
     <div class="note">
@@ -215,12 +230,12 @@
     <div class="note" style="margin-top:16px">
       <h3>What this can and can't do</h3>
       <ul>
-        <li>It reconstructs the <strong>visible surface</strong> from a single photo, so it is a 3D relief rather than a full object. The hidden back is guessed as flat.</li>
+        <li>Only the front is actually seen. In <strong>Full object</strong> mode the back is an <strong>estimate</strong> based on the outline: it assumes the object is roughly as deep as it is wide, with the back mirroring the front. That gives a plausible overall shape, not the true hidden surface. Use "Back depth" to tune it.</li>
         <li>The 3D relief is <strong>relative</strong>: "Depth strength" is an artistic control, not a measurement. Distances in metres come from a separate <strong>metric depth</strong> model and are rough estimates (see below).</li>
         <li>It works best with one clear subject, good lighting and a plain background. Glass, mirrors and very dark or blurry areas confuse it.</li>
-        <li>Full all-around reconstruction from one image (for example TripoSR) needs a GPU server. That is a possible upgrade; see my <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6" target="_blank" rel="noopener">3D-Genesis</a> work on parametric reconstruction.</li>
+        <li>Accurate all-around reconstruction from one image (for example TripoSR) needs a GPU server. That is a possible upgrade; see my <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6" target="_blank" rel="noopener">3D-Genesis</a> work on parametric reconstruction.</li>
       </ul>
-      <p>Powered by <a href="https://huggingface.co/onnx-community/depth-anything-v2-small" target="_blank" rel="noopener">Depth Anything V2 Small</a> and the <a href="https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth" target="_blank" rel="noopener">Metric</a> variants (Apache-2.0) running through <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>, with rendering by <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. Only the model weights are downloaded; your photo stays on your device.</p>
+      <p>Powered by <a href="https://huggingface.co/onnx-community/depth-anything-v2-small" target="_blank" rel="noopener">Depth Anything V2 Small</a>, <a href="https://huggingface.co/Xenova/slimsam-77-uniform" target="_blank" rel="noopener">SlimSAM</a> and the <a href="https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth" target="_blank" rel="noopener">Metric</a> variants (Apache-2.0) running through <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>, with rendering by <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. Only the model weights are downloaded; your photo stays on your device.</p>
     </div>
   </section>
 
@@ -243,6 +258,6 @@
 </footer>
 
 <script src="/assets/site.js"></script>
-<script type="module" src="/assets/depth3d/app.js?v=6"></script>
+<script type="module" src="/assets/depth3d/app.js?v=7"></script>
 </body>
 </html>
