@@ -100,7 +100,7 @@ function fitCamera() {
   controls.update();
 }
 
-function accent() { return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#8a3fd0'; }
+function accent() { return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7a30c4'; }
 
 const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 const toLinear = (a) => { const o = new Float32Array(a.length); for (let i = 0; i < a.length; i++) o[i] = srgbToLinear(a[i]); return o; };
