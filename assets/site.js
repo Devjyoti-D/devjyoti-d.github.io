@@ -89,6 +89,7 @@
   var cat = document.getElementById('side-cat');
   if (cat) {
     var irises = [].slice.call(cat.querySelectorAll('.cat-iris')), vb = cat.viewBox.baseVal, target = null, queued = false;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) cat.pauseAnimations();   // the head tilt is SMIL, which CSS can't stop
     var look = function () {
       queued = false;
       var box = cat.getBoundingClientRect();

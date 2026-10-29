@@ -117,7 +117,7 @@ p + p { margin-top: .75em; }
 @media (min-width: 1240px) and (hover: hover) {
   .side-cat {
     --cat-h: 110px; --cat-w: calc(var(--cat-h) * 536 / 1047);
-    display: block; position: fixed; z-index: 5; bottom: 0; pointer-events: none;
+    display: block; position: fixed; z-index: 5; bottom: 0; pointer-events: none; overflow: visible;
     width: var(--cat-w); height: var(--cat-h);
     left: 24px;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .18));
@@ -128,10 +128,18 @@ p + p { margin-top: .75em; }
 .side-cat .pupil { fill: #121016; }
 .side-cat .glint { fill: #fff; }
 .side-cat .eye-rim { fill: none; stroke: #1c1030; stroke-width: 4; }
-.side-cat .lid { fill: #24143a; transform-box: fill-box; transform-origin: top; transform: scaleY(0); animation: cat-blink 6s 2s infinite; }
+.side-cat .lid { fill: #24143a; transform-box: fill-box; transform-origin: top; transform: scaleY(0); animation: cat-lids 5s 1.2s infinite; }
+.side-cat .cat-v-dark { display: none; }
+[data-theme="dark"] .side-cat .cat-v-dark { display: inline; }
+[data-theme="dark"] .side-cat .cat-v-light { display: none; }
+[data-theme="dark"] .side-cat .lid { fill: #d9d6e0; }
+[data-theme="dark"] .side-cat { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+/* Tail swishes about its base (58.8% 96.6% of the tail image = where it meets the body) */
+.side-cat .cat-tail { transform-box: fill-box; transform-origin: 58.8% 96.6%; animation: cat-tail 2.6s ease-in-out infinite alternate; }
 @keyframes cat-in { from { transform: translateY(105%); } }
-@keyframes cat-blink { 0%, 94%, 100% { transform: scaleY(0); } 96.5% { transform: scaleY(1); } }
-@media (prefers-reduced-motion: reduce) { .side-cat, .side-cat .lid { animation: none; } }
+@keyframes cat-tail { from { transform: rotate(-7deg); } to { transform: rotate(9deg); } }
+@keyframes cat-lids { 0%, 94%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .side-cat, .side-cat .lid, .side-cat .cat-tail { animation: none; } }
 
 /* Hero */
 .hero { display: flex; align-items: center; gap: 48px; padding-top: 56px; padding-bottom: 24px; }
