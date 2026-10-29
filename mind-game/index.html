@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
-  <link rel="stylesheet" href="/assets/site.css?v=14">
+  <link rel="stylesheet" href="/assets/site.css?v=15">
   <link rel="stylesheet" href="/assets/lab.css?v=5">
   <link rel="stylesheet" href="/assets/mirror.css?v=2">
   <script>
@@ -37,9 +37,14 @@
       <a href="/">Home</a>
       <a href="/#projects">Projects</a>
       <a href="/#publications">Publications</a>
-      <a href="/quant-lab/">Quant Lab</a>
-      <a href="/3d-lab/">3D Lab</a>
-      <a href="/mind-game/" class="active" aria-current="page">Mind Game</a>
+      <div class="nav-group" id="labs-group">
+        <button type="button" class="nav-trigger active" id="labs-toggle" aria-expanded="false" aria-controls="labs-menu">Labs<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="nav-menu" id="labs-menu">
+          <a href="/quant-lab/"><b>Quant Lab</b><span>Can machine learning pick stocks?</span></a>
+          <a href="/3d-lab/"><b>3D Lab</b><span>Turn a photo into a 3D model</span></a>
+          <a href="/mind-game/" class="active" aria-current="page"><b>Mind Game</b><span>100 AI agents learn your mind</span></a>
+        </div>
+      </div>
       <a href="/beyond/">Beyond the Code</a>
     </nav>
     <div class="header-actions">
@@ -229,7 +234,7 @@
   <p class="container copyright">© <span id="year">2025</span> Devjyoti Das</p>
 </footer>
 
-<script src="/assets/site.js?v=6"></script>
+<script src="/assets/site.js?v=7"></script>
 <script src="/assets/lab/charts.js?v=5"></script>
 <script src="/assets/mirror/engine.js?v=3"></script>
 <script src="/assets/mirror/app.js?v=5"></script>

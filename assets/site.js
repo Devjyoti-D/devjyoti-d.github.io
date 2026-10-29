@@ -24,6 +24,19 @@
     });
   });
 
+  // Labs dropdown: click or keyboard to open; Escape or a click elsewhere closes it
+  var labs = document.getElementById('labs-group');
+  if (labs) {
+    var labsBtn = document.getElementById('labs-toggle');
+    var setLabs = function (open) { labs.classList.toggle('open', open); labsBtn.setAttribute('aria-expanded', open); };
+    labsBtn.addEventListener('click', function () { setLabs(!labs.classList.contains('open')); });
+    document.addEventListener('click', function (e) { if (!labs.contains(e.target)) setLabs(false); });
+    labs.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setLabs(false); labsBtn.focus(); } });
+    labs.addEventListener('focusout', function (e) { if (!labs.contains(e.relatedTarget)) setLabs(false); });
+    // on a desktop, hovering shows the menu; drop any click-open state when the pointer leaves
+    labs.addEventListener('mouseleave', function () { if (window.matchMedia('(hover: hover) and (min-width: 961px)').matches) setLabs(false); });
+  }
+
   // Highlight the nav link for the section in view
   var links = {};
   nav.querySelectorAll('a[href^="#"]').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });

@@ -71,11 +71,34 @@ p + p { margin-top: .75em; }
 .nav a { color: var(--muted); font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 8px; }
 .nav a:hover { color: var(--text); background: var(--accent-soft); text-decoration: none; }
 .nav a.active { color: var(--accent); }
-/* With 8 links, tighten the nav until the menu button takes over */
-@media (min-width: 961px) and (max-width: 1240px) {
-  .nav { gap: 0; }
-  .nav a { padding: 8px 7px; font-size: 14px; }
+/* The three interactive labs sit in one Labs dropdown */
+.nav-group { position: relative; }
+.nav-trigger {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: inherit; font-weight: 500; font-size: 15px; color: var(--muted);
+  background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer;
 }
+.nav-trigger svg { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+.nav-trigger:hover, .nav-group.open .nav-trigger { color: var(--text); background: var(--accent-soft); }
+.nav-trigger.active { color: var(--accent); }
+.nav-group.open .nav-trigger svg { transform: rotate(180deg); }
+.nav-menu {
+  position: absolute; top: calc(100% + 6px); left: 50%; z-index: 60;
+  width: 270px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-hover);
+  opacity: 0; visibility: hidden; transform: translate(-50%, -4px);
+  transition: opacity .15s, transform .15s, visibility .15s;
+}
+.nav-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }   /* bridges the gap so hover doesn't drop */
+.nav-group.open .nav-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+@media (hover: hover) and (min-width: 961px) {
+  .nav-group:hover .nav-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .nav-group:hover .nav-trigger svg { transform: rotate(180deg); }
+}
+.nav .nav-menu a { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border-radius: 8px; }
+.nav-menu a b { color: var(--text); font-weight: 600; font-size: 15px; }
+.nav-menu a span { color: var(--muted); font-size: 13px; font-weight: 400; }
+.nav-menu a.active b { color: var(--accent); }
 .header-actions { display: flex; gap: 4px; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -254,6 +277,15 @@ p + p { margin-top: .75em; }
   }
   .nav.open { display: flex; }
   .nav a { padding: 12px; font-size: 16px; }
+  /* In the phone menu the Labs group is an inline, expandable section */
+  .nav-trigger { width: 100%; justify-content: space-between; padding: 12px; font-size: 16px; }
+  .nav-menu {
+    position: static; width: auto; transform: none; box-shadow: none; border: 0; border-radius: 0;
+    background: none; padding: 0 0 4px 12px; display: none; opacity: 1; visibility: visible; transition: none;
+  }
+  .nav-menu::before { display: none; }
+  .nav-group.open .nav-menu { display: flex; transform: none; }
+  .nav .nav-menu a { padding: 8px 12px; }
 }
 
 /* Phone */
