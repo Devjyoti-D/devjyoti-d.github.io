@@ -137,9 +137,8 @@ p + p { margin-top: .75em; }
 /* Tail swishes about its base (58.8% 96.6% of the tail image = where it meets the body) */
 .side-cat .cat-tail { transform-box: fill-box; transform-origin: 58.8% 96.6%; animation: cat-tail 2.6s ease-in-out infinite alternate; }
 @keyframes cat-in { from { transform: translateY(105%); } }
-@keyframes cat-tail { from { transform: rotate(-7deg); } to { transform: rotate(9deg); } }
+@keyframes cat-tail { from { transform: rotate(-12deg); } to { transform: rotate(14deg); } }
 @keyframes cat-lids { 0%, 94%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
-@media (prefers-reduced-motion: reduce) { .side-cat, .side-cat .lid, .side-cat .cat-tail { animation: none; } }
 
 /* Hero */
 .hero { display: flex; align-items: center; gap: 48px; padding-top: 56px; padding-bottom: 24px; }
