@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
-  <link rel="stylesheet" href="/assets/site.css?v=5">
+  <link rel="stylesheet" href="/assets/site.css?v=8">
   <link type="application/atom+xml" rel="alternate" href="https://devjyotidas.com/feed.xml" title="Devjyoti Das">
   <script>
     // Apply saved/system theme before paint to avoid a flash
@@ -310,6 +310,29 @@
 
 </main>
 
+<!-- A cat sitting in the side margin on wide screens; its eyes follow the pointer (drawn in the source image's pixel coordinates) -->
+<svg class="side-cat" id="side-cat" viewBox="119 98 536 1047" aria-hidden="true">
+  <defs>
+    <clipPath id="cat-eye-near"><ellipse cx="456" cy="347" rx="53" ry="52" transform="rotate(-8 456 347)"/></clipPath>
+    <clipPath id="cat-eye-far"><ellipse cx="542" cy="259" rx="41" ry="20" transform="rotate(24 542 259)"/></clipPath>
+  </defs>
+  <image href="/assets/images/cat.webp?v=2" x="119" y="98" width="536" height="1047"/>
+  <g clip-path="url(#cat-eye-near)">
+    <g class="cat-iris" data-cx="456" data-cy="347" data-rx="17" data-ry="16" transform="translate(458 330)">
+      <circle r="35" class="iris"/><ellipse rx="20" ry="24" class="pupil"/><circle cx="-7" cy="-10" r="5.5" class="glint"/><circle cx="8" cy="11" r="2.5" class="glint"/>
+    </g>
+    <rect class="lid" x="398" y="290" width="116" height="114"/>
+  </g>
+  <ellipse class="eye-rim" cx="456" cy="347" rx="53" ry="52" transform="rotate(-8 456 347)"/>
+  <g clip-path="url(#cat-eye-far)">
+    <g class="cat-iris" data-cx="542" data-cy="259" data-rx="16" data-ry="6" transform="translate(537 255)">
+      <circle r="21" class="iris"/><ellipse rx="12" ry="14" class="pupil"/><circle cx="-4" cy="-6" r="3.5" class="glint"/>
+    </g>
+    <rect class="lid" x="498" y="236" width="90" height="48"/>
+  </g>
+  <ellipse class="eye-rim" cx="542" cy="259" rx="41" ry="20" transform="rotate(24 542 259)"/>
+</svg>
+
 <footer class="site-footer">
   <div class="container footer-inner">
     <div>
@@ -327,6 +350,6 @@
   <p class="container copyright">© <span id="year">2025</span> Devjyoti Das</p>
 </footer>
 
-<script src="/assets/site.js"></script>
+<script src="/assets/site.js?v=3"></script>
 </body>
 </html>

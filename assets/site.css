@@ -112,6 +112,27 @@ p + p { margin-top: .75em; }
 .chip.active { background: var(--text); border-color: var(--text); color: var(--bg); }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Cat near the left edge, half the hero photo's height: only on screens wide enough to have a margin (1080px content) */
+.side-cat { display: none; }
+@media (min-width: 1240px) and (hover: hover) {
+  .side-cat {
+    --cat-h: 110px; --cat-w: calc(var(--cat-h) * 536 / 1047);
+    display: block; position: fixed; z-index: 5; bottom: 0; pointer-events: none;
+    width: var(--cat-w); height: var(--cat-h);
+    left: 24px;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .18));
+    animation: cat-in .8s cubic-bezier(.3, 1.3, .5, 1) .4s both;
+  }
+}
+.side-cat .iris { fill: #e48f2e; stroke: #b7601a; stroke-width: 3; }
+.side-cat .pupil { fill: #121016; }
+.side-cat .glint { fill: #fff; }
+.side-cat .eye-rim { fill: none; stroke: #1c1030; stroke-width: 4; }
+.side-cat .lid { fill: #24143a; transform-box: fill-box; transform-origin: top; transform: scaleY(0); animation: cat-blink 6s 2s infinite; }
+@keyframes cat-in { from { transform: translateY(105%); } }
+@keyframes cat-blink { 0%, 94%, 100% { transform: scaleY(0); } 96.5% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .side-cat, .side-cat .lid { animation: none; } }
+
 /* Hero */
 .hero { display: flex; align-items: center; gap: 48px; padding-top: 56px; padding-bottom: 24px; }
 .hero-photo { width: 220px; height: 220px; border-radius: 50%; object-fit: cover; flex-shrink: 0; box-shadow: var(--shadow); }

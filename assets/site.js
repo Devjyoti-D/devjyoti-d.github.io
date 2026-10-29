@@ -85,5 +85,27 @@
     });
   }
 
+  // Cat in the side margin: its irises slide toward the pointer
+  var cat = document.getElementById('side-cat');
+  if (cat) {
+    var irises = [].slice.call(cat.querySelectorAll('.cat-iris')), vb = cat.viewBox.baseVal, target = null, queued = false;
+    var look = function () {
+      queued = false;
+      var box = cat.getBoundingClientRect();
+      if (!box.width) return;                                           // hidden on small screens
+      var k = box.width / vb.width;                                      // screen px per image px
+      irises.forEach(function (g) {
+        var cx = +g.dataset.cx, cy = +g.dataset.cy;
+        var dx = target.x - (box.left + (cx - vb.x) * k), dy = target.y - (box.top + (cy - vb.y) * k);
+        var d = Math.sqrt(dx * dx + dy * dy) || 1, s = Math.min(1, d / 120);   // look less far when the pointer is close
+        g.setAttribute('transform', 'translate(' + (cx + dx / d * s * g.dataset.rx).toFixed(1) + ' ' + (cy + dy / d * s * g.dataset.ry).toFixed(1) + ')');
+      });
+    };
+    window.addEventListener('pointermove', function (e) {
+      target = { x: e.clientX, y: e.clientY };
+      if (!queued) { queued = true; requestAnimationFrame(look); }
+    }, { passive: true });
+  }
+
   document.getElementById('year').textContent = new Date().getFullYear();
 })();
