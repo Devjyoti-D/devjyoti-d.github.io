@@ -71,6 +71,11 @@ p + p { margin-top: .75em; }
 .nav a { color: var(--muted); font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 8px; }
 .nav a:hover { color: var(--text); background: var(--accent-soft); text-decoration: none; }
 .nav a.active { color: var(--accent); }
+/* With 8 links, tighten the nav until the menu button takes over */
+@media (min-width: 961px) and (max-width: 1240px) {
+  .nav { gap: 0; }
+  .nav a { padding: 8px 7px; font-size: 14px; }
+}
 .header-actions { display: flex; gap: 4px; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -237,12 +242,8 @@ p + p { margin-top: .75em; }
   .highlights { grid-template-columns: 1fr; }
 }
 
-/* Phone */
-@media (max-width: 680px) {
-  .container { padding: 0 16px; }
-  .section { padding: 36px 16px 4px; }
-  .section-title { font-size: 24px; }
-
+/* Menu button: the nav has too many links to fit below 960px */
+@media (max-width: 960px) {
   .menu-btn { display: inline-flex; }
   .header-actions { margin-left: auto; }
   .nav {
@@ -253,6 +254,13 @@ p + p { margin-top: .75em; }
   }
   .nav.open { display: flex; }
   .nav a { padding: 12px; font-size: 16px; }
+}
+
+/* Phone */
+@media (max-width: 680px) {
+  .container { padding: 0 16px; }
+  .section { padding: 36px 16px 4px; }
+  .section-title { font-size: 24px; }
 
   .hero { flex-direction: column; text-align: center; gap: 20px; padding-top: 32px; }
   .hero-photo { width: 160px; height: 160px; }
