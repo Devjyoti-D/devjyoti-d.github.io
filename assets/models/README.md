@@ -8,3 +8,13 @@ Transformers.js. The export matches the PyTorch output exactly before quantisati
 depth by about 1-4% (median) on test photos.
 
 They are used by the "Measure distance" tool on `/3d-lab/`.
+
+# Other models (copied unchanged from Hugging Face)
+
+- `onnx-community/depth-anything-v2-small`: Depth Anything V2 Small (Apache-2.0), used for the 3D relief.
+  `model_quantized.onnx` runs on the CPU (WebAssembly), `model_fp16.onnx` on WebGPU.
+- `Xenova/slimsam-77-uniform`: SlimSAM, a compressed Segment Anything (Apache-2.0), used to cut out the
+  object in "Full object" mode.
+
+Each folder keeps its original `README.md` (model card and licence). The Transformers.js runtime and
+three.js are in `/assets/lib/` with their licences, so the 3D Lab needs no outside services.

@@ -29,8 +29,8 @@
   </script>
   <script type="importmap">
   { "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      "three": "/assets/lib/three/build/three.module.js",
+      "three/addons/": "/assets/lib/three/examples/jsm/"
   } }
   </script>
 </head>
@@ -237,7 +237,7 @@
         <li>It works best with one clear subject, good lighting and a plain background. Glass, mirrors and very dark or blurry areas confuse it.</li>
         <li>Accurate all-around reconstruction from one image (for example TripoSR) needs a GPU server. That is a possible upgrade; see my <a href="https://medium.com/@er.devjyoti.das/3d-genesis-reconstructing-real-world-objects-from-parametric-primitives-ce43c09c89c6" target="_blank" rel="noopener">3D-Genesis</a> work on parametric reconstruction.</li>
       </ul>
-      <p>Powered by <a href="https://huggingface.co/onnx-community/depth-anything-v2-small" target="_blank" rel="noopener">Depth Anything V2 Small</a>, <a href="https://huggingface.co/Xenova/slimsam-77-uniform" target="_blank" rel="noopener">SlimSAM</a> and the <a href="https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth" target="_blank" rel="noopener">Metric</a> variants (Apache-2.0) running through <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>, with rendering by <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. Only the model weights are downloaded; your photo stays on your device.</p>
+      <p>Powered by <a href="https://huggingface.co/onnx-community/depth-anything-v2-small" target="_blank" rel="noopener">Depth Anything V2 Small</a>, <a href="https://huggingface.co/Xenova/slimsam-77-uniform" target="_blank" rel="noopener">SlimSAM</a> and the <a href="https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth" target="_blank" rel="noopener">Metric</a> variants (Apache-2.0) running through <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>, with rendering by <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. All of these, including the model weights, are served from this website; your photo stays on your device.</p>
     </div>
   </section>
 
@@ -260,6 +260,6 @@
 </footer>
 
 <script src="/assets/site.js?v=6"></script>
-<script type="module" src="/assets/depth3d/app.js?v=7"></script>
+<script type="module" src="/assets/depth3d/app.js?v=8"></script>
 </body>
 </html>

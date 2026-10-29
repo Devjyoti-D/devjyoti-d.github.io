@@ -9,7 +9,14 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { normalizeDepth, buildMesh, buildObject } from './mesh.js?v=7';
 import { readFocal35, measure as measureDist, formatMeters } from './measure.js?v=7';
 
-const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6';
+// Everything is served from this site: the Transformers.js runtime (v3.7.6) and all model weights
+const TF_URL = '/assets/lib/transformers/transformers.min.js';
+async function loadTF() {
+  const lib = await import(TF_URL);
+  lib.env.backends.onnx.wasm.wasmPaths = '/assets/lib/transformers/';     // the WebAssembly runtime
+  lib.env.allowLocalModels = true; lib.env.allowRemoteModels = false; lib.env.localModelPath = '/assets/models/';
+  return lib;
+}
 const MODEL = 'onnx-community/depth-anything-v2-small';
 const SAM_MODEL = 'Xenova/slimsam-77-uniform';
 const MAX_SIDE = 1024;
@@ -202,7 +209,6 @@ const serial = (fn) => { const p = chain.then(fn, fn); chain = p.catch(() => {})
 async function loadEstimator(device) {
   const dtype = device === 'webgpu' ? 'fp16' : 'q8';
   dlLabel = 'the depth model'; Object.keys(files).forEach((k) => delete files[k]);
-  tf.env.allowLocalModels = false; tf.env.allowRemoteModels = true;
   if (device === 'wasm') tf.env.backends.onnx.wasm.proxy = true;     // keep the page responsive while the CPU works
   estimator = await tf.pipeline('depth-estimation', MODEL, { device, dtype, progress_callback: onProgress });
   state.device = device;
@@ -212,7 +218,7 @@ function getEstimator() {
   return serial(async () => {
     if (estimator) return estimator;
     setStatus('Loading the depth model…', 0.05);
-    tf = tf || await import(TF_URL);
+    tf = tf || await loadTF();
     let device = 'wasm';
     try { if (navigator.gpu && (await navigator.gpu.requestAdapter())) device = 'webgpu'; } catch (e) { /* use wasm */ }
     try { await loadEstimator(device); }
@@ -330,10 +336,9 @@ function handleFile(file) {
 function loadSam() {
   return serial(async () => {
     if (S.model) return;
-    tf = tf || await import(TF_URL);
+    tf = tf || await loadTF();
     dlLabel = 'the object-selection model'; Object.keys(files).forEach((k) => delete files[k]);
     setStatus('Loading the object-selection model…', 0.05);
-    tf.env.allowLocalModels = false; tf.env.allowRemoteModels = true;
     S.proc = await tf.AutoProcessor.from_pretrained(SAM_MODEL);
     S.model = await tf.SamModel.from_pretrained(SAM_MODEL, { device: 'wasm', dtype: 'q8', progress_callback: onProgress });
   });
@@ -473,13 +478,12 @@ function ensureMetric() {
   if (M.maps[scene]) return Promise.resolve(M.maps[scene]);
   return serial(async () => {
     if (M.maps[scene]) return M.maps[scene];
-    tf = tf || await import(TF_URL);
+    tf = tf || await loadTF();
     if (M.estScene !== scene) {
       if (M.est) { try { await M.est.dispose(); } catch (e) { /* ignore */ } M.est = null; }
       dlLabel = 'the ' + (scene === 'indoor' ? 'close-range' : 'far-range') + ' metric depth model'; Object.keys(files).forEach((k) => delete files[k]);
       setStatus('Loading the ' + (scene === 'indoor' ? 'close-range' : 'far-range') + ' metric depth model…', 0.05);
-      tf.env.allowLocalModels = true; tf.env.allowRemoteModels = false; tf.env.localModelPath = '/assets/models/';
-      M.est = await tf.pipeline('depth-estimation', 'da2-metric-' + scene, { device: 'wasm', dtype: 'q8', progress_callback: onProgress });
+            M.est = await tf.pipeline('depth-estimation', 'da2-metric-' + scene, { device: 'wasm', dtype: 'q8', progress_callback: onProgress });
       M.estScene = scene;
     }
     setStatus('Estimating real-world distances (metric depth)…', 0.8);
