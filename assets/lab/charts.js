@@ -83,6 +83,8 @@
       Y = function (v) { return m.t + (1 - (Math.log(v) - l0) / (l1 - l0)) * plotH; };
     } else {
       var pad = (hi - lo) * 0.06 || 0.1; lo -= pad; hi += pad;
+      if (o.min != null) lo = Math.max(lo, o.min);           // optional floor/ceiling (e.g. 0..100 for percentages)
+      if (o.max != null) hi = Math.min(hi, o.max);
       ticks = niceTicks(lo, hi, 5);
       lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
       Y = function (v) { return m.t + (1 - (v - lo) / (hi - lo)) * plotH; };
@@ -94,6 +96,12 @@
       var tx = svgEl('text', { x: X(t.i), y: H - 7, 'text-anchor': 'middle', 'class': 'ax-text' }, svg);
       tx.textContent = t.label;
     });
+    if (o.ref) {                                              // optional labelled horizontal reference (e.g. chance level)
+      svgEl('line', { x1: m.l, x2: m.l + plotW, y1: Y(o.ref.value), y2: Y(o.ref.value), 'class': 'ax-ref', 'stroke-dasharray': '4 4' }, svg);
+      var rt = svgEl('text', { x: m.l + plotW, y: Y(o.ref.value) - 6, 'text-anchor': 'end', 'class': 'ax-text', style: 'paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round' }, svg);
+      rt.textContent = o.ref.label;
+      svg.__refLabel = rt;
+    }
     (o.marks || []).forEach(function (mk) {
       svgEl('line', { x1: X(mk.i), x2: X(mk.i), y1: m.t, y2: m.t + plotH, 'class': 'ax-mark' }, svg);
       var tx = svgEl('text', { x: X(mk.i) + 6, y: m.t + 12, 'class': 'ax-text' }, svg);
@@ -111,6 +119,7 @@
       svgEl('circle', { cx: X(N - 1), cy: Y(s.values[N - 1]), r: 4, 'class': 'dot', style: 'fill:' + s.color }, svg);
     });
 
+    if (svg.__refLabel) svg.appendChild(svg.__refLabel);      // keep the reference label on top of the lines
     var cross = svgEl('line', { y1: m.t, y2: m.t + plotH, 'class': 'ax-cross', visibility: 'hidden' }, svg);
     var dots = o.series.map(function (s) { return svgEl('circle', { r: 4.5, 'class': 'dot', style: 'fill:' + s.color, visibility: 'hidden' }, svg); });
     var tip = makeTip(el), cur = N - 1;

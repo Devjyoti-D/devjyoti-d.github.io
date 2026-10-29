@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mirror: a mind game against 100 learning agents | Devjyoti Das</title>
+  <meta name="description" content="An experimental strategy game. 100 AI agents learn a model of your mind while you try to steer them. You are not playing against the AI: you are playing against what the AI believes you will do.">
+  <link rel="canonical" href="https://devjyotidas.com/mind-game/">
+  <meta property="og:title" content="Mirror: a mind game against 100 learning agents">
+  <meta property="og:description" content="You are not playing against the AI. You are playing against what the AI believes you will do.">
+  <meta property="og:url" content="https://devjyotidas.com/mind-game/">
+  <meta property="og:site_name" content="Devjyoti Das">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://devjyotidas.com/assets/images/DP.jpg">
+  <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="/assets/site.css?v=12">
+  <link rel="stylesheet" href="/assets/lab.css?v=5">
+  <link rel="stylesheet" href="/assets/mirror.css?v=2">
+  <script>
+    // Apply saved/system theme before paint to avoid a flash
+    (function () {
+      var t = localStorage.getItem('theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/">Devjyoti Das</a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="/">Home</a>
+      <a href="/#projects">Projects</a>
+      <a href="/#publications">Publications</a>
+      <a href="/quant-lab/">Quant Lab</a>
+      <a href="/3d-lab/">3D Lab</a>
+      <a href="/mind-game/" class="active" aria-current="page">Mind Game</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section class="container lab-hero">
+    <p class="eyebrow">Mind Game · Strategy, AI and behavioural modelling</p>
+    <h1>Mirror</h1>
+    <p class="bio tagline">You are not playing against the AI. <strong>You are playing against what the AI believes you will do.</strong></p>
+    <p class="bio">A colony of 100 learning agents shares four regions. You never control any of them: you shape their world with one intervention per season. While you try to read them, each agent is quietly building its own model of <em>you</em>, and acting on it.</p>
+    <div class="badges">
+      <span class="tag">100 learning agents</span>
+      <span class="tag">12 seasons, about 5 minutes</span>
+      <span class="tag">Every game is different</span>
+    </div>
+  </section>
+
+  <div class="container lab" style="margin-top:24px">
+
+    <aside class="panel controls" aria-label="Your move">
+      <div class="season-head">
+        <b id="season-label">Season 1 of 12</b>
+        <div class="pips" id="pips" aria-hidden="true"></div>
+      </div>
+      <p class="hint goal"><strong>Your goal:</strong> keep the colony cooperating. Your score is the average share of agents cooperating across all 12 seasons.</p>
+
+      <fieldset>
+        <legend>1 · Choose an intervention</legend>
+        <div class="moves" id="moves" role="radiogroup" aria-label="Intervention">
+          <button class="move" role="radio" aria-checked="false" data-type="0" type="button"><b>Audit</b><span>Fine everyone competing in the region.</span></button>
+          <button class="move" role="radio" aria-checked="false" data-type="1" type="button"><b>Bounty</b><span>Reward everyone cooperating in the region.</span></button>
+          <button class="move" role="radio" aria-checked="false" data-type="2" type="button"><b>Drought</b><span>Cut the region's resources. It lingers, and scarcity breeds conflict.</span></button>
+          <button class="move" role="radio" aria-checked="false" data-type="3" type="button"><b>Windfall</b><span>Double the region's resources this season. Plenty eases conflict.</span></button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2 · Choose a region</legend>
+        <div class="filters regions" id="regions" role="radiogroup" aria-label="Region"></div>
+        <p class="hint">Or click a region on the map.</p>
+      </fieldset>
+
+      <button class="btn btn-primary run" id="commit" type="button" disabled>Commit move</button>
+      <p class="hint center-text">The agents decide at the same moment you do, using what they predict you will do.</p>
+
+      <div class="score-box">
+        <span>Cooperation so far</span>
+        <b id="score">–</b>
+      </div>
+      <div class="row-between">
+        <button class="btn btn-sm" id="new-game" type="button">New game</button>
+        <span class="hint" id="seed-label"></span>
+      </div>
+    </aside>
+
+    <div class="results">
+      <section class="panel report" id="report" aria-live="polite">
+        <h2 id="report-title">A new colony</h2>
+        <p class="sub" id="report-text">100 agents have settled across four regions. Some cooperate and share; others compete and grab twice as much, which wastes the land. Pick an intervention and a region.</p>
+        <div class="kpis kpis-4">
+          <div class="kpi"><span class="kpi-label">Cooperating now</span><span class="kpi-value" id="k-coop">–</span><span class="kpi-sub" id="k-coop-sub">of 100 agents</span></div>
+          <div class="kpi"><span class="kpi-label">Saw your move coming</span><span class="kpi-value" id="k-saw">?</span><span class="kpi-sub" id="k-saw-sub">agents who predicted it exactly</span></div>
+          <div class="kpi"><span class="kpi-label">Colony unpredictability</span><span class="kpi-value" id="k-unpred">–</span><span class="kpi-sub" id="k-unpred-sub">how hard they are to read</span></div>
+          <div class="kpi"><span class="kpi-label">Colony wealth</span><span class="kpi-value" id="k-wealth">–</span><span class="kpi-sub">average harvest per agent</span></div>
+        </div>
+      </section>
+
+      <section class="panel map-panel">
+        <div class="panel-head">
+          <h2>The colony</h2>
+          <div class="legend"><span class="lg"><i class="dot-key" style="background:var(--s1)"></i>Cooperating</span><span class="lg"><i class="dot-key" style="background:var(--s2)"></i>Competing</span></div>
+        </div>
+        <div class="map-wrap">
+          <canvas id="map" aria-label="Map of the colony"></canvas>
+        </div>
+        <p class="sub" id="map-summary"></p>
+      </section>
+
+      <section class="panel" id="log-panel" hidden>
+        <div class="panel-head"><h2>Your moves so far</h2></div>
+        <ol class="log" id="log"></ol>
+      </section>
+    </div>
+  </div>
+
+  <!-- End of game: the reveal -->
+  <section class="container reveal" id="reveal" hidden>
+    <div class="reveal-quote">
+      <p>You believed you were teaching the agents how to behave.</p>
+      <p><strong>In reality, your behaviour became their training data.</strong></p>
+    </div>
+
+    <div class="kpis kpis-4">
+      <div class="kpi"><span class="kpi-label">Your score</span><span class="kpi-value" id="r-score"></span><span class="kpi-sub" id="r-score-sub"></span></div>
+      <div class="kpi"><span class="kpi-label">How well they read you</span><span class="kpi-value" id="r-read"></span><span class="kpi-sub" id="r-read-sub"></span></div>
+      <div class="kpi"><span class="kpi-label">Saw your last move coming</span><span class="kpi-value" id="r-saw"></span><span class="kpi-sub">of 100 agents</span></div>
+      <div class="kpi"><span class="kpi-label">Colony unpredictability</span><span class="kpi-value" id="r-unpred"></span><span class="kpi-sub" id="r-unpred-sub"></span></div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Their forecast of your next move, season by season</h2>
+        <div class="legend"><span class="lg"><i class="ring-key"></i>What you actually did</span></div></div>
+      <p class="sub">Each column is the colony's average prediction made <em>before</em> you moved. Darker means they were more sure (the scale runs from the lowest to the highest forecast in your game). Hover a cell for the numbers.</p>
+      <div class="chart" id="c-heat"></div>
+      <div class="heat-scale" aria-hidden="true"><span id="heat-min"></span><i id="heat-ramp"></i><span id="heat-max"></span></div>
+    </section>
+
+    <div class="two">
+      <section class="panel">
+        <div class="panel-head"><h2>How well they read you</h2></div>
+        <p class="sub">Probability the colony gave your actual move (intervention and region). The baseline is chance: 1 in 16 (6.25%).</p>
+        <div class="chart" id="c-read"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>How the colony changed</h2>
+          <div class="legend"><span class="lg"><i style="background:var(--s1)"></i>Cooperating</span><span class="lg"><i style="background:var(--s3)"></i>Unpredictability</span></div></div>
+        <p class="sub">Share of agents cooperating, and how random their choices were (100% = completely unreadable).</p>
+        <div class="chart" id="c-colony"></div>
+      </section>
+    </div>
+
+    <div class="two">
+      <section class="panel">
+        <div class="panel-head"><h2 id="rules-title">How they think you choose a region</h2></div>
+        <p class="sub" id="rules-sub"></p>
+        <div class="chart" id="c-rules"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Their profile of you</h2></div>
+        <ul class="profile" id="profile"></ul>
+      </section>
+    </div>
+
+    <details class="table-view panel">
+      <summary>Show all seasons as a table</summary>
+      <div class="table-wrap"><table class="data" id="t-seasons"></table></div>
+    </details>
+
+    <div class="center-text" style="margin-top:20px"><button class="btn btn-primary" id="again" type="button">Play again with a new colony</button></div>
+  </section>
+
+  <section class="container lab-explain">
+    <h2 class="section-title">How it works</h2>
+    <ol class="steps">
+      <li><h3>A social dilemma</h3><p>In each region, competitors grab twice a cooperator's share, but competition wastes the land. Grabbing pays for one agent and hurts everyone together, as in many real commons.</p></li>
+      <li><h3>They model you</h3><p>Each agent learns, only from your past moves, what you tend to do next (a Markov model with forgetting) and which rule you use to pick a region: the crowd, the competitors, the richest, the poorest, the same as last time...</p></li>
+      <li><h3>They act on it</h3><p>Before your move lands, every agent picks a region and a stance to maximise its expected payoff under its forecast of you. If they expect an audit in Riverside, its competitors quietly move elsewhere.</p></li>
+      <li><h3>They hide</h3><p>Agents caught out while doing the obvious thing, or who watch a big catch, make their own choices more random. Exploit their predictability and they learn to become unpredictable.</p></li>
+    </ol>
+    <div class="note">
+      <h3>The idea behind it</h3>
+      <ul>
+        <li>This is a toy version of <strong>theory of mind</strong> and <strong>opponent modelling</strong>: two learners modelling each other. Being predictable makes your moves cheap to counter, which is why randomising (a mixed strategy, in game-theory terms) is often optimal.</li>
+        <li>Each agent is different: how fast it forgets, how much it trusts its model of you, and how strongly it believes cooperation pays. So the colony's forecast is the average of 100 slightly different minds.</li>
+        <li>Every game uses a new random seed: different land, different agents, and a random event part-way through.</li>
+      </ul>
+      <p>Everything runs in your browser in plain JavaScript; no data is sent anywhere.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <p class="brand">Devjyoti Das</p>
+      <p><a href="mailto:er.devjyoti.das@gmail.com">er.devjyoti.das@gmail.com</a></p>
+    </div>
+    <div class="socials">
+      <a href="https://scholar.google.com/citations?user=61FzzCQAAAAJ&amp;hl=en" target="_blank" rel="noopener" aria-label="Google Scholar"><img src="/assets/images/Gscholar.svg" alt="" width="20" height="20"></a>
+      <a href="https://www.linkedin.com/in/devjyoti-d/" target="_blank" rel="noopener" aria-label="LinkedIn"><img src="/assets/images/link.svg" alt="" width="20" height="20"></a>
+      <a href="https://github.com/Devjyoti-D" target="_blank" rel="noopener" aria-label="GitHub"><img src="/assets/images/github.svg" alt="" width="20" height="20"></a>
+      <a href="https://x.com/Devjyoti_D" target="_blank" rel="noopener" aria-label="X (Twitter)"><img src="/assets/images/twitter.svg" alt="" width="20" height="20"></a>
+    </div>
+  </div>
+  <p class="container copyright">© <span id="year">2025</span> Devjyoti Das</p>
+</footer>
+
+<script src="/assets/site.js?v=6"></script>
+<script src="/assets/lab/charts.js?v=5"></script>
+<script src="/assets/mirror/engine.js?v=3"></script>
+<script src="/assets/mirror/app.js?v=5"></script>
+</body>
+</html>
