@@ -85,6 +85,31 @@
     });
   }
 
+  // Hero heading: types itself in on load, then erases and retypes every 10 seconds
+  var typed = document.getElementById('typed');
+  if (typed) {
+    var full = typed.textContent, h1 = typed.closest('h1'), run = 0;   // run: a newer cycle cancels an older one
+    var setText = function (n) { typed.textContent = full.slice(0, n); };
+    var type = function (id, n) {
+      if (id !== run) return;
+      setText(n);
+      if (n < full.length) setTimeout(function () { type(id, n + 1); }, 70 + Math.random() * 70);
+      else h1.classList.remove('typing');
+    };
+    var erase = function (id, n) {
+      if (id !== run) return;
+      setText(n);
+      if (n > 0) setTimeout(function () { erase(id, n - 1); }, 35);
+      else setTimeout(function () { type(id, 1); }, 350);
+    };
+    var cycle = function () {
+      if (document.hidden) return;
+      h1.classList.add('typing'); erase(++run, typed.textContent.length);
+    };
+    h1.classList.add('typing'); setText(0); setTimeout(function () { type(run, 1); }, 400);
+    setInterval(cycle, 10000);
+  }
+
   // Cat in the side margin: its irises slide toward the pointer
   var cat = document.getElementById('side-cat');
   if (cat) {

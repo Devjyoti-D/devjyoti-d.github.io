@@ -145,6 +145,16 @@ p + p { margin-top: .75em; }
 .hero-photo { width: 220px; height: 220px; border-radius: 50%; object-fit: cover; flex-shrink: 0; box-shadow: var(--shadow); }
 .eyebrow { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .3px; margin-bottom: 8px; }
 .hero h1 { font-size: 44px; font-weight: 700; letter-spacing: -1px; margin-bottom: 14px; }
+/* Typing heading: an invisible copy of the full text holds the size, the live text is typed over it */
+.typed-box { position: relative; display: inline-block; }
+.typed-ghost { visibility: hidden; }
+.typed-live { position: absolute; left: 0; top: 0; white-space: nowrap; }
+.typed-caret {
+  display: inline-block; width: 3px; height: .9em; margin-left: 4px; vertical-align: -.08em; border-radius: 2px;
+  background: var(--accent); animation: caret-blink 1s steps(1) infinite;
+}
+.typed.typing .typed-caret { animation: none; }
+@keyframes caret-blink { 50% { opacity: 0; } }
 .bio { color: var(--muted); font-size: 17px; line-height: 1.9; max-width: 620px; margin-bottom: 26px; }
 .bio strong { color: var(--text); font-weight: 600; }
 .hero-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
